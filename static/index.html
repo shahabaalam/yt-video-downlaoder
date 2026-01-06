@@ -10,54 +10,88 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main class="card">
-    <h1>Grab your video</h1>
-    <p>Paste a YouTube link, fetch available qualities, then pick the one you want (MP4/MKV). We'll merge video + audio and hand you the file.</p>
-    <form id="download-form">
-      <label class="field">
-        <span>YouTube URL</span>
-        <input id="url" name="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required autocomplete="off">
-      </label>
+  <div class="page">
+    <header class="brand">
+      <img src="img/logo.png" alt="Logo" class="logo">
+      <div>
+        <p class="eyebrow">High-Fidelity Media Archiving</p>
+        <h1>Pro downloader for YouTube</h1>
+      </div>
+    </header>
 
-      <div id="options" class="field two-up" hidden>
-        <label>
-          <span>Quality</span>
-          <select id="quality" name="quality"></select>
+    <main class="shell">
+      <form id="download-form" class="panel">
+        <div class="panel-top">
+          <label class="field">
+            <span class="label">YouTube URL</span>
+            <input id="url" name="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required autocomplete="off">
+          </label>
+          <button id="download-btn" type="submit" class="primary">Fetch Available Qualities</button>
+        </div>
+
+        <div id="options" class="field grid two-up" hidden>
+          <label>
+            <span class="label">Quality</span>
+            <select id="quality" name="quality"></select>
+          </label>
+          <label>
+            <span class="label">Format</span>
+            <select id="container" name="container">
+              <option value="mp4">MP4</option>
+              <option value="mkv">MKV</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="label">Custom filename (optional)</span>
+          <input id="filename" name="filename" type="text" placeholder="my-video">
         </label>
-        <label>
-          <span>Format</span>
-          <select id="container" name="container">
-            <option value="mp4">MP4</option>
-            <option value="mkv">MKV</option>
-          </select>
-        </label>
-      </div>
 
-      <label class="field">
-        <span>Custom filename (optional)</span>
-        <input id="filename" name="filename" type="text" placeholder="my-video">
-      </label>
+        <div class="actions">
+          <button id="link-btn" type="button" class="ghost" disabled>Copy download link</button>
+        </div>
 
-      <div class="actions">
-        <button id="download-btn" type="submit">Fetch qualities</button>
-        <button id="link-btn" type="button" class="secondary" disabled>Copy download link</button>
-      </div>
-      <div id="status" class="status" aria-live="polite"></div>
-      <div id="progress-wrap" class="progress-wrap" hidden>
-        <div id="progress-bar" class="progress"></div>
-      </div>
-    </form>
+        <div class="status-line">
+          <div id="status" class="status" aria-live="polite"></div>
+          <div id="progress-wrap" class="progress-wrap" hidden>
+            <div id="progress-bar" class="progress"></div>
+          </div>
+        </div>
+      </form>
 
-    <section class="history">
-      <header>
-        <h2>Recent downloads</h2>
-        <button id="refresh-history" type="button" class="ghost">Refresh</button>
-      </header>
-      <ul id="history-list" class="history-list">
-        <li class="muted">No downloads yet.</li>
-      </ul>
-    </section>
-  </main>
+      <section class="features">
+        <article>
+          <div class="icon">📋</div>
+          <p>Paste any YouTube URL</p>
+        </article>
+        <article>
+          <div class="icon">🎛️</div>
+          <p>Select resolution and container</p>
+        </article>
+        <article>
+          <div class="icon">⬇️</div>
+          <p>Direct stream or copy 30-min link</p>
+        </article>
+      </section>
+
+      <section class="history panel">
+        <header>
+          <h2>Recent Downloads</h2>
+          <button id="refresh-history" type="button" class="ghost">Refresh</button>
+        </header>
+        <ul id="history-list" class="history-list">
+          <li class="muted">No downloads yet.</li>
+        </ul>
+      </section>
+
+      <footer class="meta">
+        <span>FFmpeg + yt-dlp active</span>
+        <span>Temporary links expire ~30m</span>
+        <span>Respect YouTube ToS</span>
+      </footer>
+    </main>
+  </div>
   <script src="app.js"></script>
 </body>
 </html>
