@@ -55,6 +55,25 @@ def available_heights(url: str) -> List[int]:
     return sorted(heights, reverse=True)
 
 
+def available_audio_bitrates(url: str) -> List[int]:
+    """
+    Return sorted unique audio bitrates (abr) available for the given URL.
+    """
+    _validate_url(url)
+    try:
+        with yt_dlp.YoutubeDL({"quiet": True, "noplaylist": True}) as ydl:
+            info = ydl.extract_info(url, download=False)
+    except Exception as exc:
+        raise DownloadError(f"Could not fetch audio formats: {exc}") from exc
+
+    bitrates = {
+        int(fmt["abr"])
+        for fmt in info.get("formats", [])
+        if fmt.get("abr") and fmt.get("acodec") and fmt.get("acodec") != "none"
+    }
+    return sorted(bitrates, reverse=True)
+
+
 def download_video(
     url: str,
     quality: str | int = "1080",
@@ -67,29 +86,51 @@ def download_video(
     """
     _validate_url(url)
 
-    try:
-        height_int = int(str(quality).replace("p", ""))
-    except ValueError:
-        height_int = 1080
+    container = container.lower()
+    is_audio_only = container == "m4a"
 
-    container = container if container in {"mp4", "mkv"} else "mp4"
+    if container not in {"mp4", "mkv", "m4a"}:
+        container = "mp4"
+
     temp_dir = tempfile.mkdtemp(prefix="yt_dl_")
     fallback_name = "%(title).80s [%(id)s]"
     base_name = _sanitize_filename(desired_name, "video") if desired_name else fallback_name
 
-    video_selector = f"bestvideo[height<={height_int}]"
-    format_selector = f"{video_selector}+bestaudio/bestvideo+bestaudio/best"
+    if is_audio_only:
+        audio_quality = "192"
+        match = re.search(r"(\d+)", str(quality))
+        if match:
+            audio_quality = match.group(1)
 
-    ydl_opts: Dict[str, object] = {
-        "format": format_selector,
-        "merge_output_format": container,
-        "outtmpl": os.path.join(temp_dir, f"{base_name}.%(ext)s"),
-        "noplaylist": True,
-        "quiet": True,
-        "postprocessors": [
-            {"key": "FFmpegVideoConvertor", "preferedformat": container},
-        ],
-    }
+        format_selector = "bestaudio[ext=m4a]/bestaudio/best"
+        ydl_opts: Dict[str, object] = {
+            "format": format_selector,
+            "merge_output_format": None,
+            "outtmpl": os.path.join(temp_dir, f"{base_name}.%(ext)s"),
+            "noplaylist": True,
+            "quiet": True,
+            "postprocessors": [
+                {"key": "FFmpegExtractAudio", "preferredcodec": "m4a", "preferredquality": audio_quality}
+            ],
+        }
+    else:
+        try:
+            height_int = int(str(quality).replace("p", ""))
+        except ValueError:
+            height_int = 1080
+
+        video_selector = f"bestvideo[height<={height_int}]"
+        format_selector = f"{video_selector}+bestaudio/bestvideo+bestaudio/best"
+        ydl_opts = {
+            "format": format_selector,
+            "merge_output_format": container,
+            "outtmpl": os.path.join(temp_dir, f"{base_name}.%(ext)s"),
+            "noplaylist": True,
+            "quiet": True,
+            "postprocessors": [
+                {"key": "FFmpegVideoConvertor", "preferedformat": container},
+            ],
+        }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:

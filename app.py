@@ -13,7 +13,7 @@ from flask import (
     send_file,
 )
 
-from downloader import DownloadError, available_heights, download_video
+from downloader import DownloadError, available_audio_bitrates, available_heights, download_video
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 
@@ -81,7 +81,7 @@ def fetch_formats() -> Any:
     return jsonify(
         {
             "qualities": [f"{h}p" for h in heights],
-            "containers": ["mp4", "mkv"],
+            "containers": ["mp4", "mkv", "m4a"],
         }
     )
 
@@ -117,6 +117,25 @@ def handle_download() -> Any:
         return response
 
     return send_file(file_path, as_attachment=True, download_name=filename)
+
+
+@app.post("/api/audio-formats")
+def fetch_audio_formats() -> Any:
+    payload: Dict[str, Any] = request.get_json(silent=True) or {}
+    url = payload.get("url") or request.form.get("url")
+    if not url:
+        return jsonify({"error": "Please provide a YouTube URL."}), 400
+    try:
+        bitrates = available_audio_bitrates(url)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except DownloadError as exc:
+        return jsonify({"error": str(exc)}), 500
+
+    if not bitrates:
+        return jsonify({"error": "No audio qualities found for this link."}), 404
+
+    return jsonify({"qualities": [str(b) for b in bitrates], "containers": ["m4a"]})
 
 
 @app.post("/api/link")

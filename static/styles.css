@@ -129,6 +129,10 @@ h1 {
   gap: 10px;
 }
 
+select {
+  appearance: none;
+}
+
 .full { grid-column: 1 / -1; }
 
 .label {

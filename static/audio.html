@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>YTGrab</title>
+  <title>YTGrab Audio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -23,9 +23,9 @@
     <section class="hero inline">
       <div class="brand-inline">
         <img src="img/logo.png" alt="YTGrab logo" class="logo">
-        <h1>YTGrab</h1>
+        <h1>YTGrab Audio</h1>
       </div>
-      <p class="tagline">Paste a YouTube link, fetch real qualities, choose MP4 or MKV, and download.</p>
+      <p class="tagline">Paste a YouTube link and grab the audio as M4A.</p>
     </section>
 
     <section class="search-card">
@@ -34,26 +34,20 @@
           <span class="sr-only">YouTube URL</span>
           <input id="url" name="url" type="url" placeholder="Enter YouTube URL" required autocomplete="off">
         </label>
-        <button id="download-btn" type="submit" class="primary">Fetch qualities</button>
 
-        <div id="options" class="field grid two-up full" hidden>
-          <label>
-            <span class="label">Quality</span>
-            <select id="quality" name="quality"></select>
-          </label>
-          <label>
-            <span class="label">Format</span>
-            <select id="container" name="container">
-              <option value="mp4">MP4</option>
-              <option value="mkv">MKV</option>
-            </select>
+        <div id="options" class="field full" hidden>
+          <label class="field full">
+            <span class="label">Audio quality</span>
+            <select id="audio-quality" name="quality"></select>
           </label>
         </div>
 
         <label class="field full">
           <span class="label">Custom filename (optional)</span>
-          <input id="filename" name="filename" type="text" placeholder="my-video">
+          <input id="filename" name="filename" type="text" placeholder="my-audio">
         </label>
+
+        <button id="download-btn" type="submit" class="primary">Fetch audio qualities</button>
 
         <div class="status-line">
           <div id="status" class="status" aria-live="polite"></div>
@@ -81,6 +75,6 @@
     </footer>
   </main>
 
-  <script src="app.js"></script>
+  <script src="audio.js"></script>
 </body>
 </html>
