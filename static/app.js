@@ -1,12 +1,18 @@
 const form = document.getElementById("download-form");
 const input = document.getElementById("url");
 const qualitySelect = document.getElementById("quality");
+const containerSelect = document.getElementById("container");
 const filenameInput = document.getElementById("filename");
 const downloadBtn = document.getElementById("download-btn");
 const linkBtn = document.getElementById("link-btn");
 const statusEl = document.getElementById("status");
+const progressWrap = document.getElementById("progress-wrap");
+const progressBar = document.getElementById("progress-bar");
 const historyList = document.getElementById("history-list");
 const refreshHistoryBtn = document.getElementById("refresh-history");
+const optionsBlock = document.getElementById("options");
+
+let hasOptions = false;
 
 const setStatus = (message, tone = "neutral") => {
   statusEl.textContent = message;
@@ -17,7 +23,7 @@ const setStatus = (message, tone = "neutral") => {
 
 const setBusy = (isBusy, label = "Download") => {
   downloadBtn.disabled = isBusy;
-  linkBtn.disabled = isBusy;
+  linkBtn.disabled = isBusy || !hasOptions;
   if (isBusy) {
     downloadBtn.textContent = "Working...";
   } else {
@@ -35,9 +41,20 @@ const extractFilename = (disposition, fallback) => {
 
 const buildPayload = () => ({
   url: input.value.trim(),
-  quality: qualitySelect.value,
+  quality: qualitySelect.value.replace("p", ""),
   filename: filenameInput.value.trim(),
+  container: containerSelect.value,
 });
+
+const resetProgress = () => {
+  progressWrap.hidden = true;
+  progressBar.style.width = "0%";
+};
+
+const showProgress = () => {
+  progressWrap.hidden = false;
+  progressBar.style.width = "0%";
+};
 
 const copyToClipboard = async (text) => {
   if (navigator.clipboard?.writeText) {
@@ -71,7 +88,8 @@ const renderHistory = (items) => {
     const left = document.createElement("div");
     const chip = document.createElement("span");
     chip.className = "chip";
-    chip.textContent = item.quality;
+    const containerLabel = item.container ? ` ${item.container.toUpperCase()}` : "";
+    chip.textContent = `${item.quality}${containerLabel}`;
 
     const title = document.createElement("div");
     title.innerHTML = `<strong>${item.filename}</strong>`;
@@ -120,6 +138,53 @@ const fetchHistory = async () => {
   }
 };
 
+const populateOptions = (qualities, containers) => {
+  qualitySelect.innerHTML = "";
+  (qualities || []).forEach((q) => {
+    const option = document.createElement("option");
+    option.value = q;
+    option.textContent = q;
+    qualitySelect.append(option);
+  });
+
+  containerSelect.innerHTML = "";
+  (containers || []).forEach((c) => {
+    const option = document.createElement("option");
+    option.value = c;
+    option.textContent = c.toUpperCase();
+    containerSelect.append(option);
+  });
+
+  optionsBlock.hidden = false;
+  hasOptions = true;
+  linkBtn.disabled = false;
+  downloadBtn.textContent = "Download";
+};
+
+const fetchFormats = async (payload) => {
+  setStatus("Fetching available qualities...", "neutral");
+  setBusy(true, "Fetch qualities");
+  try {
+    const res = await fetch("/api/formats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: payload.url }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Formats failed (${res.status})`);
+    }
+    const data = await res.json();
+    populateOptions(data.qualities, data.containers);
+    setStatus("Qualities loaded. Choose quality and format, then Download.", "positive");
+  } catch (error) {
+    console.error(error);
+    setStatus(error.message || "Unable to fetch qualities.", "negative");
+  } finally {
+    setBusy(false, hasOptions ? "Download" : "Fetch qualities");
+  }
+};
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const payload = buildPayload();
@@ -128,8 +193,14 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
+  if (!hasOptions) {
+    await fetchFormats(payload);
+    return;
+  }
+
   setBusy(true);
   setStatus("Download started...", "neutral");
+  resetProgress();
 
   try {
     const response = await fetch("/api/download", {
@@ -152,7 +223,31 @@ form.addEventListener("submit", async (event) => {
 
     setStatus("Download merging on the server...", "neutral");
 
-    const blob = await response.blob();
+    showProgress();
+
+    const contentLength = Number(response.headers.get("Content-Length")) || 0;
+    const reader = response.body?.getReader ? response.body.getReader() : null;
+    let blob;
+
+    if (!reader) {
+      blob = await response.blob();
+    } else {
+      const chunks = [];
+      let received = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        if (contentLength > 0) {
+          const percent = Math.min(100, Math.floor((received / contentLength) * 100));
+          progressBar.style.width = `${percent}%`;
+          setStatus(`Downloading... ${percent}%`, "neutral");
+        }
+      }
+      blob = new Blob(chunks, { type: response.headers.get("Content-Type") || "application/octet-stream" });
+    }
+
     const filename = extractFilename(response.headers.get("Content-Disposition"), "video.mp4");
     const blobUrl = window.URL.createObjectURL(blob);
 
@@ -172,6 +267,7 @@ form.addEventListener("submit", async (event) => {
     setStatus(error.message || "Something went wrong. Please try again.", "negative");
   } finally {
     setBusy(false, "Download");
+    resetProgress();
   }
 });
 
@@ -179,6 +275,10 @@ linkBtn.addEventListener("click", async () => {
   const payload = buildPayload();
   if (!payload.url) {
     setStatus("Please paste a YouTube URL first.", "negative");
+    return;
+  }
+  if (!hasOptions) {
+    setStatus("Fetch qualities first.", "negative");
     return;
   }
 

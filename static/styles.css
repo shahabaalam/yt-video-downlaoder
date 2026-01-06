@@ -68,6 +68,11 @@ form {
   gap: 12px;
 }
 
+label[hidden],
+.field[hidden] {
+  display: none;
+}
+
 label span {
   font-weight: 600;
   font-size: 14px;
@@ -144,6 +149,22 @@ button.ghost {
 .status.positive { color: #0f766e; }
 .status.negative { color: #b91c1c; }
 
+.progress-wrap {
+  margin-top: 6px;
+  width: 100%;
+  background: #e2e8f0;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  transition: width 0.15s ease;
+}
+
 .history {
   margin-top: 24px;
   border-top: 1px solid var(--border);
@@ -174,6 +195,8 @@ button.ghost {
   border-radius: 10px;
   padding: 10px 12px;
   font-size: 14px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .history-list .muted {

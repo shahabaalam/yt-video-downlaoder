@@ -13,7 +13,7 @@ from flask import (
     send_file,
 )
 
-from downloader import DownloadError, QUALITY_MAP, download_video
+from downloader import DownloadError, available_heights, download_video
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 
@@ -36,11 +36,19 @@ def _delete_link(token: str) -> None:
         shutil.rmtree(meta.get("temp_dir", ""), ignore_errors=True)
 
 
-def _record_history(url: str, quality: str, filename: str, mode: str, token: Optional[str] = None) -> None:
+def _record_history(
+    url: str,
+    quality: str,
+    filename: str,
+    mode: str,
+    container: str,
+    token: Optional[str] = None,
+) -> None:
     HISTORY.appendleft(
         {
             "url": url,
             "quality": quality,
+            "container": container,
             "filename": filename,
             "mode": mode,
             "link": f"/api/link/{token}" if token else None,
@@ -54,25 +62,51 @@ def index() -> Any:
     return app.send_static_file("index.html")
 
 
+@app.post("/api/formats")
+def fetch_formats() -> Any:
+    payload: Dict[str, Any] = request.get_json(silent=True) or {}
+    url = payload.get("url") or request.form.get("url")
+    if not url:
+        return jsonify({"error": "Please provide a YouTube URL."}), 400
+    try:
+        heights = available_heights(url)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except DownloadError as exc:
+        return jsonify({"error": str(exc)}), 500
+
+    if not heights:
+        return jsonify({"error": "No video qualities found for this link."}), 404
+
+    return jsonify(
+        {
+            "qualities": [f"{h}p" for h in heights],
+            "containers": ["mp4", "mkv"],
+        }
+    )
+
+
 @app.post("/api/download")
 def handle_download() -> Any:
     payload: Dict[str, Any] = request.get_json(silent=True) or {}
     url = payload.get("url") or request.form.get("url")
-    quality = payload.get("quality") or request.form.get("quality") or "1080p"
+    quality = payload.get("quality") or request.form.get("quality") or "1080"
     desired_name = payload.get("filename") or request.form.get("filename") or ""
+    container = payload.get("container") or request.form.get("container") or "mp4"
 
     if not url:
         return jsonify({"error": "Please provide a YouTube URL."}), 400
 
     try:
-        file_path, temp_dir = download_video(url, quality=quality, desired_name=desired_name)
+        file_path, temp_dir = download_video(url, quality=quality, desired_name=desired_name, container=container)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     except DownloadError as exc:
         return jsonify({"error": str(exc)}), 500
 
     filename = os.path.basename(file_path)
-    _record_history(url, quality, filename, mode="direct")
+    quality_label = f"{quality}p" if str(quality).isdigit() else str(quality)
+    _record_history(url, quality_label, filename, mode="direct", container=container)
 
     @after_this_request
     def cleanup(response: Any) -> Any:
@@ -90,14 +124,15 @@ def create_link() -> Any:
     _cleanup_links()
     payload: Dict[str, Any] = request.get_json(silent=True) or {}
     url = payload.get("url") or request.form.get("url")
-    quality = payload.get("quality") or request.form.get("quality") or "1080p"
+    quality = payload.get("quality") or request.form.get("quality") or "1080"
     desired_name = payload.get("filename") or request.form.get("filename") or ""
+    container = payload.get("container") or request.form.get("container") or "mp4"
 
     if not url:
         return jsonify({"error": "Please provide a YouTube URL."}), 400
 
     try:
-        file_path, temp_dir = download_video(url, quality=quality, desired_name=desired_name)
+        file_path, temp_dir = download_video(url, quality=quality, desired_name=desired_name, container=container)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     except DownloadError as exc:
@@ -112,7 +147,8 @@ def create_link() -> Any:
         "created_at": time.time(),
     }
 
-    _record_history(url, quality, filename, mode="link", token=token)
+    quality_label = f"{quality}p" if str(quality).isdigit() else str(quality)
+    _record_history(url, quality_label, filename, mode="link", container=container, token=token)
 
     return jsonify({"link": f"/api/link/{token}", "filename": filename, "expires_in": LINK_TTL_SECONDS})
 

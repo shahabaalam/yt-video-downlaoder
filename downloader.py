@@ -2,37 +2,13 @@ import os
 import re
 import shutil
 import tempfile
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import yt_dlp
 
 
 class DownloadError(Exception):
     """Raised when a download or merge step fails."""
-
-
-QUALITY_MAP: Dict[str, Dict[str, object]] = {
-    "1080p": {
-        "format": "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best",
-        "container": "mp4",
-        "audio_only": False,
-    },
-    "720p": {
-        "format": "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best",
-        "container": "mp4",
-        "audio_only": False,
-    },
-    "480p": {
-        "format": "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=480]+bestaudio/best",
-        "container": "mp4",
-        "audio_only": False,
-    },
-    "audio": {
-        "format": "bestaudio[ext=m4a]/bestaudio/best",
-        "container": "m4a",
-        "audio_only": True,
-    },
-}
 
 
 def _validate_url(url: str) -> None:
@@ -60,42 +36,65 @@ def _find_latest_file(directory: str) -> str:
     return max(candidates, key=os.path.getmtime) if candidates else ""
 
 
-def download_video(url: str, quality: str = "1080p", desired_name: str = "") -> Tuple[str, str]:
+def available_heights(url: str) -> List[int]:
     """
-    Download a YouTube video with selectable quality (1080p/720p/480p/audio).
+    Return sorted unique heights available for the given URL (video formats only).
+    """
+    _validate_url(url)
+    try:
+        with yt_dlp.YoutubeDL({"quiet": True, "noplaylist": True}) as ydl:
+            info = ydl.extract_info(url, download=False)
+    except Exception as exc:
+        raise DownloadError(f"Could not fetch formats: {exc}") from exc
+
+    heights = {
+        int(fmt["height"])
+        for fmt in info.get("formats", [])
+        if fmt.get("height") and fmt.get("vcodec") and fmt.get("vcodec") != "none"
+    }
+    return sorted(heights, reverse=True)
+
+
+def download_video(
+    url: str,
+    quality: str | int = "1080",
+    desired_name: str = "",
+    container: str = "mp4",
+) -> Tuple[str, str]:
+    """
+    Download a YouTube video with selectable quality height and container.
     Returns (final_file_path, temp_dir). Caller is responsible for cleaning up temp_dir.
     """
     _validate_url(url)
 
-    quality_key = quality if quality in QUALITY_MAP else "1080p"
-    opts = QUALITY_MAP[quality_key]
-    container = str(opts["container"])
-    audio_only = bool(opts["audio_only"])
+    try:
+        height_int = int(str(quality).replace("p", ""))
+    except ValueError:
+        height_int = 1080
 
+    container = container if container in {"mp4", "mkv"} else "mp4"
     temp_dir = tempfile.mkdtemp(prefix="yt_dl_")
     fallback_name = "%(title).80s [%(id)s]"
     base_name = _sanitize_filename(desired_name, "video") if desired_name else fallback_name
 
-    ydl_opts = {
-        "format": opts["format"],
-        "merge_output_format": None if audio_only else container,
+    video_selector = f"bestvideo[height<={height_int}]"
+    format_selector = f"{video_selector}+bestaudio/bestvideo+bestaudio/best"
+
+    ydl_opts: Dict[str, object] = {
+        "format": format_selector,
+        "merge_output_format": container,
         "outtmpl": os.path.join(temp_dir, f"{base_name}.%(ext)s"),
         "noplaylist": True,
         "quiet": True,
-        "postprocessors": [],
+        "postprocessors": [
+            {"key": "FFmpegVideoConvertor", "preferedformat": container},
+        ],
     }
-
-    if audio_only:
-        ydl_opts["postprocessors"].append(
-            {"key": "FFmpegExtractAudio", "preferredcodec": container, "preferredquality": "192"}
-        )
-    else:
-        ydl_opts["postprocessors"].append({"key": "FFmpegVideoConvertor", "preferedformat": container})
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            prepared = ydl.prepare_filename(info)
+            ydl.prepare_filename(info)
     except Exception as exc:  # pragma: no cover - defensive catch for CLI errors
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise DownloadError(f"Download failed: {exc}") from exc
@@ -105,7 +104,6 @@ def download_video(url: str, quality: str = "1080p", desired_name: str = "") -> 
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise DownloadError("Merged output not found.")
 
-    # Ensure desired custom filename has correct extension (after yt-dlp postprocessing).
     if desired_name:
         clean_base = _sanitize_filename(desired_name, "")
         if clean_base:
@@ -115,7 +113,6 @@ def download_video(url: str, quality: str = "1080p", desired_name: str = "") -> 
                 os.replace(final_path, custom_path)
                 final_path = custom_path
             except OSError:
-                # If rename fails, keep the original.
                 pass
 
     return final_path, temp_dir
