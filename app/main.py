@@ -11,7 +11,7 @@ import yt_dlp
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 DOWNLOAD_ROOT = Path(os.getenv("DOWNLOAD_DIR", "/data/downloads")).resolve()
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
@@ -40,14 +40,16 @@ class DownloadPayload(BaseModel):
     url: str
     quality: str
 
-    @validator("url")
+    @field_validator("url")
+    @classmethod
     def validate_url(cls, v: str) -> str:
         cleaned = v.strip()
         if not cleaned.startswith(("http://", "https://")):
             raise ValueError("URL must start with http:// or https://")
         return cleaned
 
-    @validator("quality")
+    @field_validator("quality")
+    @classmethod
     def validate_quality(cls, v: str) -> str:
         allowed = {"1080p", "720p", "audio"}
         if v not in allowed:

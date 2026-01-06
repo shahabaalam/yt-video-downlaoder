@@ -11,17 +11,18 @@ Private, personal-use web app to download YouTube videos via yt-dlp. Targets MP4
 - Render-ready: persistent disk mount, start/build commands, ffmpeg install
 
 ## Quickstart (local)
-Requirements: Python 3.10+, ffmpeg installed, `pip`.
+Requirements: Python 3.11+ (Pydantic v2 compatible), ffmpeg installed, `pip`.
 
 ```bash
 python -m venv .venv
-.\.venv\Scripts\activate  # on Windows (PowerShell)
+.\.venv\Scripts\activate  # on Windows PowerShell
 # source .venv/bin/activate  # on macOS/Linux
+pip install --upgrade pip
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Open http://localhost:8000 and use the form to download.
+Open http://localhost:8000 and use the form.
 
 ## Render Deployment
 1. Create a Web Service from this repo.
