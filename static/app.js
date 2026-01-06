@@ -4,7 +4,6 @@ const qualitySelect = document.getElementById("quality");
 const containerSelect = document.getElementById("container");
 const filenameInput = document.getElementById("filename");
 const downloadBtn = document.getElementById("download-btn");
-const linkBtn = document.getElementById("link-btn");
 const statusEl = document.getElementById("status");
 const progressWrap = document.getElementById("progress-wrap");
 const progressBar = document.getElementById("progress-bar");
@@ -23,7 +22,6 @@ const setStatus = (message, tone = "neutral") => {
 
 const setBusy = (isBusy, label = "Download") => {
   downloadBtn.disabled = isBusy;
-  linkBtn.disabled = isBusy || !hasOptions;
   if (isBusy) {
     downloadBtn.textContent = "Working...";
   } else {
@@ -56,22 +54,6 @@ const showProgress = () => {
   progressBar.style.width = "0%";
 };
 
-const copyToClipboard = async (text) => {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return true;
-  }
-  const temp = document.createElement("textarea");
-  temp.value = text;
-  temp.style.position = "fixed";
-  temp.style.opacity = "0";
-  document.body.append(temp);
-  temp.select();
-  const success = document.execCommand("copy");
-  temp.remove();
-  return success;
-};
-
 const renderHistory = (items) => {
   historyList.innerHTML = "";
   if (!items || items.length === 0) {
@@ -101,27 +83,7 @@ const renderHistory = (items) => {
 
     left.append(chip, title, meta);
 
-    const actions = document.createElement("div");
-    actions.className = "history-actions";
-    if (item.link) {
-      const copyBtn = document.createElement("button");
-      copyBtn.type = "button";
-      copyBtn.className = "secondary copy-btn";
-      copyBtn.textContent = "Copy link";
-      copyBtn.addEventListener("click", async () => {
-        const absoluteLink = new URL(item.link, window.location.origin).toString();
-        try {
-          await copyToClipboard(absoluteLink);
-          setStatus("Link copied.", "positive");
-        } catch (error) {
-          console.error(error);
-          setStatus("Unable to copy link.", "negative");
-        }
-      });
-      actions.append(copyBtn);
-    }
-
-    li.append(left, actions);
+    li.append(left);
     historyList.append(li);
   });
 };
@@ -268,46 +230,6 @@ form.addEventListener("submit", async (event) => {
   } finally {
     setBusy(false, "Download");
     resetProgress();
-  }
-});
-
-linkBtn.addEventListener("click", async () => {
-  const payload = buildPayload();
-  if (!payload.url) {
-    setStatus("Please paste a YouTube URL first.", "negative");
-    return;
-  }
-  if (!hasOptions) {
-    setStatus("Fetch qualities first.", "negative");
-    return;
-  }
-
-  setBusy(true);
-  setStatus("Preparing link...", "neutral");
-
-  try {
-    const response = await fetch("/api/link", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.error || `Request failed (${response.status})`);
-    }
-
-    const data = await response.json();
-    const absoluteLink = new URL(data.link, window.location.origin).toString();
-    await copyToClipboard(absoluteLink);
-
-    setStatus("Download link copied to clipboard.", "positive");
-    fetchHistory();
-  } catch (error) {
-    console.error(error);
-    setStatus(error.message || "Unable to create download link.", "negative");
-  } finally {
-    setBusy(false, "Download");
   }
 });
 
