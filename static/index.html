@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Personal YouTube Downloader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main class="page">
+    <section class="card">
+      <h1>Personal YouTube Downloader</h1>
+      <p class="muted">Private, personal use only. Downloads auto-clean after 1 hour.</p>
+
+      <form id="download-form" class="form">
+        <label class="field">
+          <span>Video URL</span>
+          <input id="url" name="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required>
+        </label>
+
+        <label class="field">
+          <span>Quality</span>
+          <select id="quality" name="quality">
+            <option value="1080p">1080p MP4 (137 + best audio)</option>
+            <option value="720p">720p MP4</option>
+            <option value="audio">Audio only (MP3)</option>
+          </select>
+        </label>
+
+        <button id="submit" type="submit">Download</button>
+      </form>
+
+      <div class="status">
+        <div class="progress">
+          <div id="progress-fill"></div>
+        </div>
+        <div class="status-text">
+          <span id="status-label">Idle</span>
+          <span id="percent">0%</span>
+        </div>
+      </div>
+
+      <div id="alert" class="alert hidden"></div>
+      <div id="download-link" class="download-link hidden">
+        <a id="link" href="#" download>Download ready</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
