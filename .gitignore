@@ -1,26 +1,24 @@
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
 .Python
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-
-# Environments
-.env
-.env.*
-venv/
 .venv/
-
-# IDEs / tooling
-.vscode/
-.idea/
+env/
+venv/
 
 # OS
 .DS_Store
 Thumbs.db
 
+# Tooling / editors
+.idea/
+.vscode/
+
 # Downloads / temp
+*.mp4
+*.mkv
+*.webm
+*.m4a
+*.mp3
+temp/
 *.log
-data/

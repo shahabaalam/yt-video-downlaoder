@@ -1,42 +1,32 @@
-# Personal YouTube Downloader (FastAPI + yt-dlp)
+# YouTube 1080p Downloader (Personal)
 
-Private, personal-use web app to download YouTube videos via yt-dlp. Targets MP4 (1080p/720p) or MP3 audio, merges audio/video with ffmpeg, auto-cleans files older than 1 hour, and prevents concurrent downloads per client.
+A minimal Flask app that downloads YouTube videos up to 1080p, merges video + audio with `yt-dlp` + `ffmpeg`, and streams the final MP4 back to you. Includes a mobile-friendly single-page frontend.
 
-## Features
-- FastAPI backend serving static HTML/CSS/JS
-- Quality options: 1080p (137+best audio), 720p, audio-only (MP3)
-- Progress/status polling with merged output download link
-- Auto-delete downloads older than 1 hour
-- Single active download per client to reduce load
-- Render-ready: persistent disk mount, start/build commands, ffmpeg install
+## Requirements
+- Python 3.9+ (tested with 3.11)
+- `ffmpeg` available on your `PATH`
+- Python packages: `Flask`, `yt-dlp` (see `requirements.txt`)
 
-## Quickstart (local)
-Requirements: Python 3.11+ (Pydantic v2 compatible), ffmpeg installed, `pip`.
-
+## Setup
 ```bash
 python -m venv .venv
-.\.venv\Scripts\activate  # on Windows PowerShell
-# source .venv/bin/activate  # on macOS/Linux
-pip install --upgrade pip
+.venv\Scripts\activate        # PowerShell: .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Open http://localhost:8000 and use the form.
+## Run the server
+```bash
+python app.py
+# Server listens on http://0.0.0.0:5000
+```
 
-## Render Deployment
-1. Create a Web Service from this repo.
-2. Add a Persistent Disk (e.g., name `downloads`, mount path `/data`, size 5GB).
-3. Render uses `render.yaml` to install ffmpeg, dependencies, and start via uvicorn.
+Then open `http://localhost:5000` (desktop or mobile). Paste a YouTube URL and click **Download MP4**; the backend fetches the best 1080p stream + best audio, merges them, and serves the combined file as an attachment.
 
-## Environment
-- `DOWNLOAD_DIR` (optional): custom download directory. Defaults to `/data/downloads` (for Render persistent disk).
-
-## Project Structure
-- `app/main.py` — FastAPI app, download logic, cleanup, file serving
-- `static/` — HTML, CSS, JS frontend
-- `render.yaml` — Render service definition with ffmpeg install and start command
-- `requirements.txt` — Python dependencies
+## How it works
+- `downloader.py` contains the download/merge logic using `yt-dlp` with a 1080p cap and `merge_output_format=mp4`.
+- Temporary files are created per request and cleaned up after the response is sent.
+- The frontend (`static/index.html`) calls `POST /api/download` with JSON `{ "url": "<youtube link>" }` and then saves the returned blob locally.
 
 ## Notes
-- For personal/private use only. No monetization or public scraping logic included.
+- This app is intended for personal use. Respect YouTube's Terms of Service and local laws.
+- If you prefer a different port, set `PORT=8080` (or any number) before running.

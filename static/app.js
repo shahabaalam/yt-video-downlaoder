@@ -1,115 +1,73 @@
 const form = document.getElementById("download-form");
-const urlInput = document.getElementById("url");
-const qualitySelect = document.getElementById("quality");
-const submitBtn = document.getElementById("submit");
-const statusLabel = document.getElementById("status-label");
-const percentLabel = document.getElementById("percent");
-const progressFill = document.getElementById("progress-fill");
-const alertBox = document.getElementById("alert");
-const downloadLinkWrap = document.getElementById("download-link");
-const downloadAnchor = document.getElementById("link");
+const input = document.getElementById("url");
+const button = document.getElementById("download-btn");
+const statusEl = document.getElementById("status");
 
-let pollTimer = null;
-let currentJob = null;
+const setStatus = (message, tone = "neutral") => {
+  statusEl.textContent = message;
+  statusEl.classList.remove("positive", "negative");
+  if (tone === "positive") statusEl.classList.add("positive");
+  if (tone === "negative") statusEl.classList.add("negative");
+};
 
-function setStatus(message, progressValue = null) {
-  statusLabel.textContent = message;
-  if (progressValue !== null) {
-    const clamped = Math.max(0, Math.min(100, progressValue));
-    percentLabel.textContent = `${clamped.toFixed(0)}%`;
-    progressFill.style.width = `${clamped}%`;
-  }
-}
+const extractFilename = (disposition, fallback) => {
+  if (!disposition) return fallback;
+  const match = /filename\*?=([^;]+)/i.exec(disposition);
+  if (!match) return fallback;
+  const value = match[1].trim().replace(/^UTF-8''/, "");
+  return decodeURIComponent(value).replace(/["']/g, "") || fallback;
+};
 
-function setAlert(message, isError = true) {
-  if (!message) {
-    alertBox.classList.add("hidden");
-    alertBox.textContent = "";
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const url = input.value.trim();
+  if (!url) {
+    setStatus("Please paste a YouTube URL first.", "negative");
     return;
   }
-  alertBox.textContent = message;
-  alertBox.classList.toggle("error", isError);
-  alertBox.classList.toggle("success", !isError);
-  alertBox.classList.remove("hidden");
-}
 
-async function startDownload(event) {
-  event.preventDefault();
-  if (pollTimer) clearInterval(pollTimer);
-  setAlert("");
-  downloadLinkWrap.classList.add("hidden");
-  submitBtn.disabled = true;
-  setStatus("Starting...", 0);
-
-  const payload = {
-    url: urlInput.value.trim(),
-    quality: qualitySelect.value,
-  };
+  button.disabled = true;
+  button.textContent = "Working...";
+  setStatus("Downloading and merging on the server. This can take a moment...");
 
   try {
-    const res = await fetch("/api/download", {
+    const response = await fetch("/api/download", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ url }),
     });
 
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({}));
-      throw new Error(error.detail || "Failed to start download");
-    }
-
-    const data = await res.json();
-    currentJob = data.job_id;
-    pollTimer = setInterval(() => checkStatus(currentJob), 1400);
-  } catch (err) {
-    setAlert(err.message || "Unable to start download");
-    submitBtn.disabled = false;
-    setStatus("Idle", 0);
-  }
-}
-
-async function checkStatus(jobId) {
-  try {
-    const res = await fetch(`/api/status/${jobId}`);
-    if (!res.ok) {
-      throw new Error("Status request failed");
-    }
-    const data = await res.json();
-    const { status, progress, download_url: downloadUrl, error, filename } = data;
-
-    if (status === "downloading") {
-      setStatus("Downloading...", progress ?? 0);
-    } else if (status === "merging") {
-      setStatus("Merging audio and video...", progress ?? 99);
-    } else if (status === "completed") {
-      setStatus("Ready", 100);
-      clearInterval(pollTimer);
-      pollTimer = null;
-      submitBtn.disabled = false;
-      if (downloadUrl) {
-        downloadAnchor.href = downloadUrl;
-        downloadAnchor.textContent = `Download ${filename || "file"}`;
-        downloadLinkWrap.classList.remove("hidden");
+    if (!response.ok) {
+      let message = `Request failed (${response.status})`;
+      try {
+        const data = await response.json();
+        if (data?.error) message = data.error;
+      } catch (_) {
+        const text = await response.text();
+        message = text || message;
       }
-      setAlert("Download complete", false);
-    } else if (status === "queued") {
-      setStatus("Queued...", progress ?? 0);
-    } else if (status === "error") {
-      clearInterval(pollTimer);
-      pollTimer = null;
-      submitBtn.disabled = false;
-      setStatus("Error", progress ?? 0);
-      setAlert(error || "Download failed");
-    } else {
-      setStatus("Idle", progress ?? 0);
+      throw new Error(message);
     }
-  } catch (err) {
-    clearInterval(pollTimer);
-    pollTimer = null;
-    submitBtn.disabled = false;
-    setStatus("Error", 0);
-    setAlert(err.message || "Unable to fetch status");
-  }
-}
 
-form.addEventListener("submit", startDownload);
+    const blob = await response.blob();
+    const filename = extractFilename(response.headers.get("Content-Disposition"), "video.mp4");
+    const blobUrl = window.URL.createObjectURL(blob);
+
+    const anchor = document.createElement("a");
+    anchor.href = blobUrl;
+    anchor.download = filename;
+    anchor.style.display = "none";
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(blobUrl);
+
+    setStatus("Download ready! Your video should start saving shortly.", "positive");
+  } catch (error) {
+    console.error(error);
+    setStatus(error.message || "Something went wrong. Please try again.", "negative");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Download MP4";
+  }
+});

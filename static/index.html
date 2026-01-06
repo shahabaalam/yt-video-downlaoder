@@ -1,55 +1,25 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Personal YouTube Downloader</title>
+  <title>YT 1080p Downloader</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main class="page">
-    <section class="card">
-      <h1>Personal YouTube Downloader</h1>
-      <p class="muted">Private, personal use only. Downloads auto-clean after 1 hour.</p>
-
-      <form id="download-form" class="form">
-        <label class="field">
-          <span>Video URL</span>
-          <input id="url" name="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required>
-        </label>
-
-        <label class="field">
-          <span>Quality</span>
-          <select id="quality" name="quality">
-            <option value="1080p">1080p MP4 (137 + best audio)</option>
-            <option value="720p">720p MP4</option>
-            <option value="audio">Audio only (MP3)</option>
-          </select>
-        </label>
-
-        <button id="submit" type="submit">Download</button>
-      </form>
-
-      <div class="status">
-        <div class="progress">
-          <div id="progress-fill"></div>
-        </div>
-        <div class="status-text">
-          <span id="status-label">Idle</span>
-          <span id="percent">0%</span>
-        </div>
-      </div>
-
-      <div id="alert" class="alert hidden"></div>
-      <div id="download-link" class="download-link hidden">
-        <a id="link" href="#" download>Download ready</a>
-      </div>
-    </section>
+  <main class="card">
+    <h1>Download 1080p + Audio</h1>
+    <p>Paste a YouTube link, and the server will fetch, merge video and audio, and hand you a single MP4.</p>
+    <form id="download-form">
+      <label for="url">YouTube URL</label>
+      <input id="url" name="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required autocomplete="off">
+      <button id="download-btn" type="submit">Download MP4</button>
+      <div id="status" class="status" aria-live="polite"></div>
+    </form>
   </main>
-
-  <script src="/static/app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
