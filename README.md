@@ -1,6 +1,13 @@
 # YouTube 1080p Downloader (Personal)
 
-A minimal Flask app that downloads YouTube videos up to 1080p, merges video + audio with `yt-dlp` + `ffmpeg`, and streams the final MP4 back to you. Includes a mobile-friendly single-page frontend.
+A minimal Flask app that downloads YouTube videos (1080p/720p/480p or audio-only), merges video + audio with `yt-dlp` + `ffmpeg`, and streams the final file back to you. Includes a mobile-friendly single-page frontend.
+
+## Features
+- Quality selector: 1080p / 720p / 480p / audio-only.
+- Optional custom filename for the downloaded file.
+- Copyable download link (helpful on mobile devices); links auto-expire after ~30 minutes.
+- Recent download history (in-memory, last 15).
+- Inline status updates for start/completed/error.
 
 ## Requirements
 - Python 3.9+ (tested with 3.11)
@@ -20,12 +27,14 @@ python app.py
 # Server listens on http://0.0.0.0:5000
 ```
 
-Then open `http://localhost:5000` (desktop or mobile). Paste a YouTube URL and click **Download MP4**; the backend fetches the best 1080p stream + best audio, merges them, and serves the combined file as an attachment.
+Then open `http://localhost:5000` (desktop or mobile). Paste a YouTube URL, choose quality (or audio-only), set an optional filename, and click **Download**. Use **Copy download link** if you want a sharable link instead of an immediate file save.
 
 ## How it works
-- `downloader.py` contains the download/merge logic using `yt-dlp` with a 1080p cap and `merge_output_format=mp4`.
-- Temporary files are created per request and cleaned up after the response is sent.
-- The frontend (`static/index.html`) calls `POST /api/download` with JSON `{ "url": "<youtube link>" }` and then saves the returned blob locally.
+- `downloader.py` contains the download/merge logic using `yt-dlp` with quality presets and `ffmpeg` post-processing.
+- `POST /api/download` streams the merged file immediately; temp files are cleaned right after the response.
+- `POST /api/link` prepares a download and returns a copyable `/api/link/<token>` that expires in ~30 minutes; the file is deleted when fetched or expired.
+- `GET /api/history` returns the recent (in-memory) downloads for the UI.
+- The frontend (`static/*`) handles the form, quality/filename inputs, copy-link flow, and history rendering.
 
 ## Notes
 - This app is intended for personal use. Respect YouTube's Terms of Service and local laws.

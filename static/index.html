@@ -12,13 +12,45 @@
 <body>
   <main class="card">
     <h1>Download 1080p + Audio</h1>
-    <p>Paste a YouTube link, and the server will fetch, merge video and audio, and hand you a single MP4.</p>
+    <p>Paste a YouTube link, pick a quality or audio-only, and the server will fetch, merge, and hand you a single file.</p>
     <form id="download-form">
-      <label for="url">YouTube URL</label>
-      <input id="url" name="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required autocomplete="off">
-      <button id="download-btn" type="submit">Download MP4</button>
+      <label class="field">
+        <span>YouTube URL</span>
+        <input id="url" name="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required autocomplete="off">
+      </label>
+
+      <div class="field two-up">
+        <label>
+          <span>Quality</span>
+          <select id="quality" name="quality">
+            <option value="1080p">1080p</option>
+            <option value="720p">720p</option>
+            <option value="480p">480p</option>
+            <option value="audio">Audio only</option>
+          </select>
+        </label>
+        <label>
+          <span>Custom filename (optional)</span>
+          <input id="filename" name="filename" type="text" placeholder="my-video.mp4">
+        </label>
+      </div>
+
+      <div class="actions">
+        <button id="download-btn" type="submit">Download</button>
+        <button id="link-btn" type="button" class="secondary">Copy download link</button>
+      </div>
       <div id="status" class="status" aria-live="polite"></div>
     </form>
+
+    <section class="history">
+      <header>
+        <h2>Recent downloads</h2>
+        <button id="refresh-history" type="button" class="ghost">Refresh</button>
+      </header>
+      <ul id="history-list" class="history-list">
+        <li class="muted">No downloads yet.</li>
+      </ul>
+    </section>
   </main>
   <script src="app.js"></script>
 </body>

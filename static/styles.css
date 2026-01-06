@@ -41,6 +41,11 @@ h1 {
   letter-spacing: -0.02em;
 }
 
+h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
 p {
   margin: 0 0 18px;
   color: var(--muted);
@@ -53,12 +58,25 @@ form {
   gap: 12px;
 }
 
-label {
-  font-weight: 600;
-  font-size: 14px;
+.field {
+  display: grid;
+  gap: 6px;
 }
 
-input[type="url"] {
+.field.two-up {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+label span {
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-block;
+}
+
+input[type="url"],
+input[type="text"],
+select {
   width: 100%;
   padding: 14px 12px;
   border-radius: 12px;
@@ -68,7 +86,9 @@ input[type="url"] {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-input[type="url"]:focus {
+input[type="url"]:focus,
+input[type="text"]:focus,
+select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
 }
@@ -91,6 +111,30 @@ button:hover:not(:disabled) { transform: translateY(-1px); }
 button:active:not(:disabled) { transform: translateY(0); }
 button:disabled { opacity: 0.7; cursor: not-allowed; }
 
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+button.secondary {
+  background: #e2e8f0;
+  color: var(--text);
+  box-shadow: none;
+}
+
+button.secondary:hover:not(:disabled) {
+  transform: none;
+  background: #cbd5e1;
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--text);
+  box-shadow: none;
+  padding: 8px 8px;
+}
+
 .status {
   min-height: 20px;
   font-size: 14px;
@@ -99,3 +143,63 @@ button:disabled { opacity: 0.7; cursor: not-allowed; }
 
 .status.positive { color: #0f766e; }
 .status.negative { color: #b91c1c; }
+
+.history {
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.history header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.history-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.history-list .muted {
+  color: var(--muted);
+  justify-content: center;
+}
+
+.chip {
+  background: #e0f2fe;
+  color: var(--accent-strong);
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+.history-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.copy-btn {
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+.muted {
+  color: var(--muted);
+}
