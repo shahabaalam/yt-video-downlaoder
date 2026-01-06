@@ -12,72 +12,89 @@
 <body>
   <div class="page">
     <header class="brand">
-      <img src="img/logo.png" alt="Logo" class="logo">
+      <img src="static/img/logo.png" alt="Logo" class="logo">
       <div>
         <p class="eyebrow">High-Fidelity Media Archiving</p>
         <h1>Pro downloader for YouTube</h1>
+        <p class="subtitle">Fetch available qualities, pick a container, then download or copy a timed link. Progress and history included.</p>
       </div>
     </header>
 
     <main class="shell">
-      <form id="download-form" class="panel">
-        <div class="panel-top">
-          <label class="field">
+      <section class="panel form-panel">
+        <div class="panel-header">
+          <div class="step-pill">Step 1</div>
+          <span class="hint">Paste a YouTube URL and fetch the qualities this video actually provides.</span>
+        </div>
+        <form id="download-form" class="form-grid">
+          <label class="field full">
             <span class="label">YouTube URL</span>
             <input id="url" name="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required autocomplete="off">
           </label>
-          <button id="download-btn" type="submit" class="primary">Fetch Available Qualities</button>
-        </div>
+          <button id="download-btn" type="submit" class="primary">Fetch available qualities</button>
 
-        <div id="options" class="field grid two-up" hidden>
-          <label>
-            <span class="label">Quality</span>
-            <select id="quality" name="quality"></select>
-          </label>
-          <label>
-            <span class="label">Format</span>
-            <select id="container" name="container">
-              <option value="mp4">MP4</option>
-              <option value="mkv">MKV</option>
-            </select>
-          </label>
-        </div>
-
-        <label class="field">
-          <span class="label">Custom filename (optional)</span>
-          <input id="filename" name="filename" type="text" placeholder="my-video">
-        </label>
-
-        <div class="actions">
-          <button id="link-btn" type="button" class="ghost" disabled>Copy download link</button>
-        </div>
-
-        <div class="status-line">
-          <div id="status" class="status" aria-live="polite"></div>
-          <div id="progress-wrap" class="progress-wrap" hidden>
-            <div id="progress-bar" class="progress"></div>
+          <div id="options" class="field grid two-up full" hidden>
+            <label>
+              <span class="label">Quality</span>
+              <select id="quality" name="quality"></select>
+            </label>
+            <label>
+              <span class="label">Format</span>
+              <select id="container" name="container">
+                <option value="mp4">MP4</option>
+                <option value="mkv">MKV</option>
+              </select>
+            </label>
           </div>
-        </div>
-      </form>
+
+          <label class="field full">
+            <span class="label">Custom filename (optional)</span>
+            <input id="filename" name="filename" type="text" placeholder="my-video">
+          </label>
+
+          <div class="actions">
+            <button id="link-btn" type="button" class="ghost" disabled>Copy download link</button>
+          </div>
+
+          <div class="status-line">
+            <div id="status" class="status" aria-live="polite"></div>
+            <div id="progress-wrap" class="progress-wrap" hidden>
+              <div id="progress-bar" class="progress"></div>
+            </div>
+          </div>
+        </form>
+      </section>
 
       <section class="features">
         <article>
           <div class="icon">📋</div>
-          <p>Paste any YouTube URL</p>
+          <div>
+            <p class="feature-title">Paste any YouTube URL</p>
+            <p>We validate and query yt-dlp for real format options.</p>
+          </div>
         </article>
         <article>
           <div class="icon">🎛️</div>
-          <p>Select resolution and container</p>
+          <div>
+            <p class="feature-title">Select resolution & container</p>
+            <p>Only shows the heights that exist for this video; pick MP4 or MKV.</p>
+          </div>
         </article>
         <article>
           <div class="icon">⬇️</div>
-          <p>Direct stream or copy 30-min link</p>
+          <div>
+            <p class="feature-title">Download or share</p>
+            <p>Stream immediately or copy a 30-minute link for another device.</p>
+          </div>
         </article>
       </section>
 
       <section class="history panel">
         <header>
-          <h2>Recent Downloads</h2>
+          <div class="panel-header">
+            <div class="step-pill">Recent</div>
+            <h2>Recent Downloads</h2>
+          </div>
           <button id="refresh-history" type="button" class="ghost">Refresh</button>
         </header>
         <ul id="history-list" class="history-list">

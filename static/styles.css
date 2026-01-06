@@ -58,6 +58,12 @@ h1 {
   letter-spacing: -0.01em;
 }
 
+.subtitle {
+  margin: 6px 0 0;
+  color: var(--muted);
+  max-width: 780px;
+}
+
 h2 {
   margin: 0;
   font-size: 18px;
@@ -84,9 +90,21 @@ p {
   backdrop-filter: blur(12px);
 }
 
-.panel-top {
-  display: grid;
+.panel-header {
+  display: flex;
+  align-items: center;
   gap: 10px;
+  margin-bottom: 10px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.5fr;
+  gap: 12px;
+}
+
+.form-grid .full {
+  grid-column: 1 / -1;
 }
 
 .field {
@@ -108,6 +126,22 @@ label[hidden],
   font-weight: 600;
   font-size: 13px;
   color: #d4dcf7;
+}
+
+.step-pill {
+  background: rgba(98, 176, 255, 0.15);
+  color: var(--accent-strong);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 input[type="url"],
@@ -156,6 +190,7 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .primary {
   width: 100%;
+  height: 100%;
 }
 
 .actions {
@@ -173,6 +208,7 @@ button.ghost {
 .status-line {
   display: grid;
   gap: 8px;
+  grid-column: 1 / -1;
 }
 
 .status {
@@ -215,6 +251,12 @@ button.ghost {
   align-items: center;
   justify-items: start;
   box-shadow: var(--shadow);
+}
+
+.feature-title {
+  color: #dce4ff;
+  font-weight: 700;
+  margin: 0 0 2px;
 }
 
 .icon {
@@ -297,8 +339,7 @@ button.ghost {
 }
 
 @media (min-width: 700px) {
-  .panel-top {
-    grid-template-columns: 2fr 1fr;
-    align-items: end;
+  .form-grid {
+    grid-template-columns: 1.4fr 0.6fr;
   }
 }
