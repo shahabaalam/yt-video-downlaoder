@@ -2,7 +2,7 @@ import os
 import re
 import shutil
 import tempfile
-from typing import Any, List, Tuple
+from typing import Any, Dict, List, Tuple, cast
 
 import yt_dlp
 
@@ -34,10 +34,31 @@ def _find_latest_file(directory: str) -> str:
     ]
     return max(candidates, key=os.path.getmtime) if candidates else ""
 
-
-def available_heights(url: str) -> List[int]:
+def is_playlist(url: str) -> bool:
     """
-    Return sorted unique heights available for the given URL (video formats only).
+    Return True if the URL points to a playlist (based on yt-dlp metadata).
+    """
+    _validate_url(url)
+    try:
+        # Fix: Cast to 'Any' to completely bypass the strict TypedDict check
+        with yt_dlp.YoutubeDL(
+            cast(Any, {
+                "quiet": True,
+                "skip_download": True,
+                "extract_flat": True,
+                "noplaylist": False,
+            })
+        ) as ydl:
+            info = ydl.extract_info(url, download=False)
+    except Exception:
+        return False
+
+    return bool(info and (info.get("_type") == "playlist" or info.get("entries")))
+
+
+def available_heights(url: str) -> Tuple[List[int], Dict[str, str]]:
+    """
+    Return (heights, meta) where heights are sorted unique video heights and meta has title/thumbnail.
     """
     _validate_url(url)
     try:
@@ -45,7 +66,7 @@ def available_heights(url: str) -> List[int]:
         with yt_dlp.YoutubeDL({"quiet": True, "noplaylist": True}) as ydl:
             info = ydl.extract_info(url, download=False)
             if not info:
-                return []
+                return [], {"title": "", "thumbnail": ""}
     except Exception as exc:
         raise DownloadError(f"Could not fetch formats: {exc}") from exc
 
@@ -54,20 +75,29 @@ def available_heights(url: str) -> List[int]:
         for fmt in (info.get("formats") or [])
         if fmt.get("height") and fmt.get("vcodec") and fmt.get("vcodec") != "none"
     }
-    return sorted(heights, reverse=True)
+    meta = {
+        "title": info.get("title") or "",
+        "thumbnail": info.get("thumbnail") or "",
+    }
+    if not meta["thumbnail"]:
+        thumbs = info.get("thumbnails") or []
+        if thumbs:
+            meta["thumbnail"] = thumbs[-1].get("url") or ""
+
+    return sorted(heights, reverse=True), meta
 
 
-def available_audio_bitrates(url: str) -> List[int]:
+def available_audio_bitrates(url: str) -> Tuple[List[int], Dict[str, str]]:
     """
-    Return sorted unique audio bitrates (abr) available for the given URL.
+    Return (bitrates, meta) where bitrates is sorted unique audio abr values
+    and meta includes title + thumbnail for UI previews.
     """
     _validate_url(url)
     try:
-        # Pass dict directly to avoid TypedDict mismatch
         with yt_dlp.YoutubeDL({"quiet": True, "noplaylist": True}) as ydl:
             info = ydl.extract_info(url, download=False)
             if not info:
-                return []
+                return [], {"title": "", "thumbnail": ""}
     except Exception as exc:
         raise DownloadError(f"Could not fetch audio formats: {exc}") from exc
 
@@ -76,7 +106,19 @@ def available_audio_bitrates(url: str) -> List[int]:
         for fmt in (info.get("formats") or [])
         if fmt.get("abr") and fmt.get("acodec") and fmt.get("acodec") != "none"
     }
-    return sorted(bitrates, reverse=True)
+    
+    meta = {
+        "title": info.get("title") or "",
+        "thumbnail": info.get("thumbnail") or "",
+    }
+    
+    # Fallback to the last thumbnail in the list if the main one is missing
+    if not meta["thumbnail"]:
+        thumbs = info.get("thumbnails") or []
+        if thumbs:
+            meta["thumbnail"] = thumbs[-1].get("url") or ""
+
+    return sorted(bitrates, reverse=True), meta
 
 
 def download_video(
@@ -92,9 +134,9 @@ def download_video(
     _validate_url(url)
 
     container = container.lower()
-    is_audio_only = container == "m4a"
+    is_audio_only = container in {"m4a", "mp3"}
 
-    if container not in {"mp4", "mkv", "m4a"}:
+    if container not in {"mp4", "mkv", "m4a", "mp3"}:
         container = "mp4"
 
     temp_dir = tempfile.mkdtemp(prefix="yt_dl_")
@@ -103,22 +145,36 @@ def download_video(
 
     try:
         if is_audio_only:
-            audio_quality = "192"
-            match = re.search(r"(\d+)", str(quality))
-            if match:
-                audio_quality = match.group(1)
+            quality_str = str(quality).lower()
+            match = re.search(r"(\d+)", quality_str)
+            best_audio_requested = quality_str in {"best", "max", "highest"} or not match
 
-            # Option 1: Pass dict inline
+            # Define postprocessors as a generic List[Dict]
+            postprocessors: List[Dict[str, Any]] = [
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3" if container == "mp3" else "m4a",
+                }
+            ]
+
+            if best_audio_requested:
+                format_selector = "bestaudio/best"
+            else:
+                max_abr = match.group(1) if match else "320"
+                format_selector = (
+                    f"bestaudio[abr<={max_abr}][ext=m4a]/"
+                    f"bestaudio[abr<={max_abr}]/"
+                    "bestaudio/best"
+                )
+                postprocessors[0]["preferredquality"] = max_abr
+
             with yt_dlp.YoutubeDL({
-                "format": "bestaudio[ext=m4a]/bestaudio/best",
+                "format": format_selector,
                 "outtmpl": os.path.join(temp_dir, f"{base_name}.%(ext)s"),
                 "noplaylist": True,
                 "quiet": True,
-                "postprocessors": [{
-                    "key": "FFmpegExtractAudio",
-                    "preferredcodec": "m4a",
-                    "preferredquality": audio_quality
-                }],
+                # Fix: Cast the list to Any to satisfy the strict Type Checker
+                "postprocessors": cast(List[Any], postprocessors),
             }) as ydl:
                 info = ydl.extract_info(url, download=True)
         else:
@@ -130,7 +186,6 @@ def download_video(
             video_selector = f"bestvideo[height<={height_int}]"
             format_selector = f"{video_selector}+bestaudio/bestvideo+bestaudio/best"
 
-            # Option 1: Pass dict inline
             with yt_dlp.YoutubeDL({
                 "format": format_selector,
                 "merge_output_format": container,
@@ -139,7 +194,8 @@ def download_video(
                 "quiet": True,
                 "postprocessors": [{
                     "key": "FFmpegVideoConvertor",
-                    "preferredformat": container,  # Fixed spelling here
+                    # yt-dlp expects the misspelled 'preferedformat'
+                    "preferedformat": container,
                 }],
             }) as ydl:
                 info = ydl.extract_info(url, download=True)
@@ -165,3 +221,100 @@ def download_video(
                 pass
 
     return final_path, temp_dir
+
+
+def download_playlist(
+    url: str,
+    quality: str | int = "1080",
+    desired_name: str = "",
+    container: str = "mp4",
+) -> Tuple[str, str]:
+    """
+    Download an entire playlist as a ZIP of individual files.
+    Returns (zip_path, temp_dir). Caller cleans up temp_dir.
+    """
+    _validate_url(url)
+
+    container = container.lower()
+    is_audio_only = container in {"m4a", "mp3"}
+    if container not in {"mp4", "mkv", "m4a", "mp3"}:
+        container = "mp4"
+
+    temp_dir = tempfile.mkdtemp(prefix="yt_pl_")
+    files_dir = os.path.join(temp_dir, "files")
+    os.makedirs(files_dir, exist_ok=True)
+
+    fallback_name = "%(playlist_title).80s"
+    base_name = _sanitize_filename(desired_name, "") if desired_name else ""
+    playlist_label = base_name or fallback_name
+    file_pattern = os.path.join(files_dir, f"%(playlist_index)03d - %(title).80s.%(ext)s")
+
+    try:
+        if is_audio_only:
+            quality_str = str(quality).lower()
+            match = re.search(r"(\d+)", quality_str)
+            best_audio_requested = quality_str in {"best", "max", "highest"} or not match
+
+            postprocessors: List[Dict[str, Any]] = [
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3" if container == "mp3" else "m4a",
+                }
+            ]
+
+            if best_audio_requested:
+                format_selector = "bestaudio/best"
+            else:
+                max_abr = match.group(1) if match else "320"
+                format_selector = (
+                    f"bestaudio[abr<={max_abr}][ext=m4a]/"
+                    f"bestaudio[abr<={max_abr}]/"
+                    "bestaudio/best"
+                )
+                postprocessors[0]["preferredquality"] = max_abr
+
+            with yt_dlp.YoutubeDL({
+                "format": format_selector,
+                "outtmpl": file_pattern,
+                "noplaylist": False,
+                "quiet": True,
+                "ignoreerrors": True,
+                "postprocessors": cast(List[Any], postprocessors),
+            }) as ydl:
+                ydl.extract_info(url, download=True)
+        else:
+            try:
+                height_int = int(str(quality).replace("p", ""))
+            except ValueError:
+                height_int = 1080
+
+            video_selector = f"bestvideo[height<={height_int}]"
+            format_selector = f"{video_selector}+bestaudio/bestvideo+bestaudio/best"
+
+            with yt_dlp.YoutubeDL({
+                "format": format_selector,
+                "merge_output_format": container,
+                "outtmpl": file_pattern,
+                "noplaylist": False,
+                "quiet": True,
+                "ignoreerrors": True,
+                "postprocessors": [{
+                    "key": "FFmpegVideoConvertor",
+                    # yt-dlp expects the misspelled 'preferedformat'
+                    "preferedformat": container,
+                }],
+            }) as ydl:
+                ydl.extract_info(url, download=True)
+
+    except Exception as exc:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise DownloadError(f"Playlist download failed: {exc}") from exc
+
+    # Zip the downloaded files
+    zip_base = os.path.join(temp_dir, _sanitize_filename(playlist_label, "playlist"))
+    zip_path = shutil.make_archive(zip_base, "zip", files_dir)
+    if not os.path.isfile(zip_path):
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise DownloadError("Playlist archive not created.")
+
+    return zip_path, temp_dir

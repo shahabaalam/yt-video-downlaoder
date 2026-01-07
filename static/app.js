@@ -1,7 +1,5 @@
 const form = document.getElementById("download-form");
 const input = document.getElementById("url");
-const qualitySelect = document.getElementById("quality");
-const containerSelect = document.getElementById("container");
 const filenameInput = document.getElementById("filename");
 const downloadBtn = document.getElementById("download-btn");
 const statusEl = document.getElementById("status");
@@ -9,9 +7,22 @@ const progressWrap = document.getElementById("progress-wrap");
 const progressBar = document.getElementById("progress-bar");
 const historyList = document.getElementById("history-list");
 const refreshHistoryBtn = document.getElementById("refresh-history");
-const optionsBlock = document.getElementById("options");
+const resultCard = document.getElementById("result-card");
+const audioRows = document.getElementById("audio-rows");
+const videoRows = document.getElementById("video-rows");
+const mediaThumb = document.getElementById("media-thumb");
+const mediaTitle = document.getElementById("media-title");
+const tabButtons = Array.from(document.querySelectorAll(".tab[data-tab]"));
+const panels = {
+  audio: document.getElementById("audio-panel"),
+  video: document.getElementById("video-panel"),
+};
 
-let hasOptions = false;
+let hasFormats = false;
+let videoState = { qualities: [], containers: [] };
+let audioState = { qualities: [] };
+let mediaMeta = { title: "", thumbnail: "" };
+const AUDIO_OPTIONS = ["320", "128"];
 
 const setStatus = (message, tone = "neutral") => {
   statusEl.textContent = message;
@@ -20,13 +31,9 @@ const setStatus = (message, tone = "neutral") => {
   if (tone === "negative") statusEl.classList.add("negative");
 };
 
-const setBusy = (isBusy, label = "Download") => {
+const setBusy = (isBusy, label = "Fetch formats") => {
   downloadBtn.disabled = isBusy;
-  if (isBusy) {
-    downloadBtn.textContent = "Working...";
-  } else {
-    downloadBtn.textContent = label;
-  }
+  downloadBtn.textContent = isBusy ? "Working..." : label;
 };
 
 const extractFilename = (disposition, fallback) => {
@@ -37,11 +44,11 @@ const extractFilename = (disposition, fallback) => {
   return decodeURIComponent(value).replace(/["']/g, "") || fallback;
 };
 
-const buildPayload = () => ({
+const buildPayload = (quality, container) => ({
   url: input.value.trim(),
-  quality: qualitySelect.value.replace("p", ""),
+  quality,
   filename: filenameInput.value.trim(),
-  container: containerSelect.value,
+  container,
 });
 
 const resetProgress = () => {
@@ -82,7 +89,6 @@ const renderHistory = (items) => {
     meta.textContent = `${item.mode} - ${date}`;
 
     left.append(chip, title, meta);
-
     li.append(left);
     historyList.append(li);
   });
@@ -100,67 +106,142 @@ const fetchHistory = async () => {
   }
 };
 
-const populateOptions = (qualities, containers) => {
-  qualitySelect.innerHTML = "";
-  (qualities || []).forEach((q) => {
-    const option = document.createElement("option");
-    option.value = q;
-    option.textContent = q;
-    qualitySelect.append(option);
-  });
-
-  containerSelect.innerHTML = "";
-  (containers || []).forEach((c) => {
-    const option = document.createElement("option");
-    option.value = c;
-    option.textContent = c.toUpperCase();
-    containerSelect.append(option);
-  });
-
-  optionsBlock.hidden = false;
-  hasOptions = true;
-  linkBtn.disabled = false;
-  downloadBtn.textContent = "Download";
+const renderPreview = (meta = {}) => {
+  mediaTitle.textContent = meta.title || "Ready to download";
+  if (meta.thumbnail) {
+    mediaThumb.src = meta.thumbnail;
+    mediaThumb.alt = meta.title || "Video thumbnail";
+    mediaThumb.hidden = false;
+  } else {
+    mediaThumb.src = "";
+    mediaThumb.hidden = true;
+  }
+  resultCard.hidden = false;
 };
 
-const fetchFormats = async (payload) => {
-  setStatus("Fetching available qualities...", "neutral");
-  setBusy(true, "Fetch qualities");
-  try {
-    const res = await fetch("/api/formats", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: payload.url }),
+const renderAudioRows = (qualities) => {
+  audioRows.innerHTML = "";
+  const list = qualities && qualities.length ? qualities : AUDIO_OPTIONS;
+  list.forEach((q) => {
+    const row = document.createElement("tr");
+    const fileType = document.createElement("td");
+    fileType.textContent = `MP3 - ${q}kbps`;
+
+    const format = document.createElement("td");
+    format.textContent = "Auto";
+
+    const action = document.createElement("td");
+    action.className = "action-cell";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "⬇ Download";
+    btn.addEventListener("click", () => startDownload(q, "mp3"));
+    action.append(btn);
+
+    row.append(fileType, format, action);
+    audioRows.append(row);
+  });
+};
+
+const renderVideoRows = (qualities, containers) => {
+  videoRows.innerHTML = "";
+  const list = qualities && qualities.length ? qualities : [];
+  const videoContainers = (containers || []).filter((c) => c !== "m4a" && c !== "mp3");
+  list.forEach((quality) => {
+    videoContainers.forEach((container) => {
+      const row = document.createElement("tr");
+
+      const fileType = document.createElement("td");
+      fileType.textContent = `${container.toUpperCase()} - ${quality}`;
+
+      const format = document.createElement("td");
+      format.textContent = container.toUpperCase();
+
+      const action = document.createElement("td");
+      action.className = "action-cell";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = "⬇ Download";
+      btn.addEventListener("click", () => startDownload(quality, container));
+      action.append(btn);
+
+      row.append(fileType, format, action);
+      videoRows.append(row);
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || `Formats failed (${res.status})`);
+  });
+};
+
+const applyTab = (tab) => {
+  tabButtons.forEach((btn) => {
+    const isActive = btn.dataset.tab === tab;
+    btn.classList.toggle("active", isActive);
+    btn.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  Object.entries(panels).forEach(([key, panel]) => {
+    panel.hidden = key !== tab;
+  });
+};
+
+const populateFormats = (videoResp, audioResp) => {
+  videoState = {
+    qualities: videoResp?.qualities || [],
+    containers: videoResp?.containers || [],
+  };
+  audioState = { qualities: AUDIO_OPTIONS };
+  mediaMeta = videoResp?.meta || audioResp?.meta || { title: "", thumbnail: "" };
+
+  renderPreview(mediaMeta);
+  renderAudioRows(audioState.qualities);
+  renderVideoRows(videoState.qualities, videoState.containers);
+  applyTab("audio");
+  hasFormats = true;
+  setStatus("Formats loaded. Pick Audio or Video and click Download.", "positive");
+};
+
+const fetchAllFormats = async (url) => {
+  setBusy(true, "Fetching...");
+  setStatus("Fetching available formats...", "neutral");
+  try {
+    const [videoRes, audioRes] = await Promise.all([
+      fetch("/api/formats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      }),
+      fetch("/api/audio-formats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      }),
+    ]);
+
+    const videoData = videoRes.ok ? await videoRes.json() : null;
+    const audioData = audioRes.ok ? await audioRes.json() : null;
+
+    if (!videoRes.ok) {
+      throw new Error(videoData?.error || `Video formats failed (${videoRes.status})`);
     }
-    const data = await res.json();
-    populateOptions(data.qualities, data.containers);
-    setStatus("Qualities loaded. Choose quality and format, then Download.", "positive");
+    if (!audioRes.ok) {
+      throw new Error(audioData?.error || `Audio formats failed (${audioRes.status})`);
+    }
+
+    populateFormats(videoData, audioData);
   } catch (error) {
     console.error(error);
-    setStatus(error.message || "Unable to fetch qualities.", "negative");
+    setStatus(error.message || "Unable to fetch formats.", "negative");
   } finally {
-    setBusy(false, hasOptions ? "Download" : "Fetch qualities");
+    setBusy(false, "Fetch formats");
   }
 };
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const payload = buildPayload();
+const startDownload = async (quality, container) => {
+  const payload = buildPayload(quality, container);
   if (!payload.url) {
     setStatus("Please paste a YouTube URL first.", "negative");
     return;
   }
 
-  if (!hasOptions) {
-    await fetchFormats(payload);
-    return;
-  }
-
-  setBusy(true);
+  setBusy(true, "Downloading...");
   setStatus("Download started...", "neutral");
   resetProgress();
 
@@ -184,7 +265,6 @@ form.addEventListener("submit", async (event) => {
     }
 
     setStatus("Download merging on the server...", "neutral");
-
     showProgress();
 
     const contentLength = Number(response.headers.get("Content-Length")) || 0;
@@ -210,7 +290,8 @@ form.addEventListener("submit", async (event) => {
       blob = new Blob(chunks, { type: response.headers.get("Content-Type") || "application/octet-stream" });
     }
 
-    const filename = extractFilename(response.headers.get("Content-Disposition"), "video.mp4");
+    const fallbackName = container === "mp3" ? "audio.mp3" : "video.mp4";
+    const filename = extractFilename(response.headers.get("Content-Disposition"), fallbackName);
     const blobUrl = window.URL.createObjectURL(blob);
 
     const anchor = document.createElement("a");
@@ -228,9 +309,23 @@ form.addEventListener("submit", async (event) => {
     console.error(error);
     setStatus(error.message || "Something went wrong. Please try again.", "negative");
   } finally {
-    setBusy(false, "Download");
+    setBusy(false, "Fetch formats");
     resetProgress();
   }
+};
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const url = input.value.trim();
+  if (!url) {
+    setStatus("Please paste a YouTube URL first.", "negative");
+    return;
+  }
+  await fetchAllFormats(url);
+});
+
+tabButtons.forEach((btn) => {
+  btn.addEventListener("click", () => applyTab(btn.dataset.tab));
 });
 
 refreshHistoryBtn.addEventListener("click", fetchHistory);

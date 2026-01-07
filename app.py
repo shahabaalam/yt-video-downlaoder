@@ -13,7 +13,14 @@ from flask import (
     send_file,
 )
 
-from downloader import DownloadError, available_audio_bitrates, available_heights, download_video
+from downloader import (
+    DownloadError,
+    available_audio_bitrates,
+    available_heights,
+    download_playlist,
+    download_video,
+    is_playlist,
+)
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 
@@ -69,7 +76,7 @@ def fetch_formats() -> Any:
     if not url:
         return jsonify({"error": "Please provide a YouTube URL."}), 400
     try:
-        heights = available_heights(url)
+        heights, meta = available_heights(url)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     except DownloadError as exc:
@@ -82,6 +89,7 @@ def fetch_formats() -> Any:
         {
             "qualities": [f"{h}p" for h in heights],
             "containers": ["mp4", "mkv", "m4a"],
+            "meta": meta,
         }
     )
 
@@ -92,14 +100,23 @@ def handle_download() -> Any:
     url = payload.get("url") or request.form.get("url")
     desired_name = payload.get("filename") or request.form.get("filename") or ""
     container = payload.get("container") or request.form.get("container") or "mp4"
-    default_quality = "best" if container == "m4a" else "1080"
+    default_quality = "320" if container in {"m4a", "mp3"} else "1080"
     quality = payload.get("quality") or request.form.get("quality") or default_quality
 
     if not url:
         return jsonify({"error": "Please provide a YouTube URL."}), 400
 
+    playlist_mode = is_playlist(url)
+
     try:
-        file_path, temp_dir = download_video(url, quality=quality, desired_name=desired_name, container=container)
+        if playlist_mode:
+            file_path, temp_dir = download_playlist(
+                url, quality=quality, desired_name=desired_name, container=container
+            )
+        else:
+            file_path, temp_dir = download_video(
+                url, quality=quality, desired_name=desired_name, container=container
+            )
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     except DownloadError as exc:
@@ -107,7 +124,8 @@ def handle_download() -> Any:
 
     filename = os.path.basename(file_path)
     quality_label = f"{quality}p" if str(quality).isdigit() else str(quality)
-    _record_history(url, quality_label, filename, mode="direct", container=container)
+    mode_label = "playlist" if playlist_mode else "direct"
+    _record_history(url, quality_label, filename, mode=mode_label, container=container)
 
     @after_this_request
     def cleanup(response: Any) -> Any:
@@ -127,16 +145,15 @@ def fetch_audio_formats() -> Any:
     if not url:
         return jsonify({"error": "Please provide a YouTube URL."}), 400
     try:
-        bitrates = available_audio_bitrates(url)
+        bitrates, meta = available_audio_bitrates(url)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     except DownloadError as exc:
         return jsonify({"error": str(exc)}), 500
 
-    if not bitrates:
-        return jsonify({"error": "No audio qualities found for this link."}), 404
-
-    return jsonify({"qualities": ["best"] + [str(b) for b in bitrates], "containers": ["m4a"]})
+    # Force fixed MP3 options
+    fixed_qualities = ["320", "128"]
+    return jsonify({"qualities": fixed_qualities, "containers": ["mp3"], "meta": meta})
 
 
 @app.post("/api/link")

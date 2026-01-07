@@ -18,22 +18,49 @@
     </nav>
   </header>
 
-  <main class="page">
+  <main class="page how-page">
     <section class="hero">
       <div class="brand-inline">
         <img src="img/logo.png" alt="YTGrab logo" class="logo">
         <h1>How to use YTGrab</h1>
       </div>
-      <p class="tagline">Quick steps to fetch the right quality and download your video.</p>
+      <p class="tagline">One place for video and audio: fetch formats, pick a row, and download.</p>
     </section>
 
     <section class="info">
-      <h2>Steps</h2>
-      <ol>
-        <li>Open the Home page and paste any YouTube URL, then click “Fetch qualities”.</li>
-        <li>Select one of the real qualities yt-dlp finds and choose MP4 or MKV.</li>
-        <li>Optionally set a filename, then click Download to save the merged file.</li>
+      <h2>Quick start</h2>
+      <ol class="step-list">
+        <li>Go to <strong>Home</strong>, paste a YouTube URL, and hit <em>Fetch formats</em>.</li>
+        <li>Review the preview card; use the tabs to switch between <strong>Audio</strong> and <strong>Video</strong>.</li>
+        <li>Click a Download button in the table row you want. That’s it.</li>
       </ol>
+    </section>
+
+    <section class="info">
+      <h2>Audio only</h2>
+      <ol class="step-list">
+        <li>Stay on the <strong>Audio</strong> tab.</li>
+        <li>Pick MP3 320 kbps (highest) or MP3 128 kbps (smaller size).</li>
+        <li>Click Download to get an MP3 file.</li>
+      </ol>
+    </section>
+
+    <section class="info">
+      <h2>Video</h2>
+      <ol class="step-list">
+        <li>Switch to the <strong>Video</strong> tab.</li>
+        <li>Choose a resolution row (e.g., 1080p) and container (MP4/MKV) from the table.</li>
+        <li>Click Download to grab the merged video + audio.</li>
+      </ol>
+    </section>
+
+    <section class="info">
+      <h2>Tips</h2>
+      <ul class="tip-list">
+        <li>Use the filename box on Home to set a custom name before downloading.</li>
+        <li>If a download fails, ensure FFmpeg is installed and the YouTube link is public.</li>
+        <li>Temporary download links and history entries auto-expire after ~30 minutes.</li>
+      </ul>
     </section>
   </main>
 </body>

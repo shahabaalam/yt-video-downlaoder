@@ -9,8 +9,14 @@ const progressBar = document.getElementById("progress-bar");
 const historyList = document.getElementById("history-list");
 const refreshHistoryBtn = document.getElementById("refresh-history");
 const optionsBlock = document.getElementById("options");
+const resultCard = document.getElementById("result-card");
+const audioRows = document.getElementById("audio-rows");
+const mediaThumb = document.getElementById("media-thumb");
+const mediaTitle = document.getElementById("media-title");
 
 let hasOptions = false;
+let audioMeta = null;
+let audioQualities = [];
 
 const setStatus = (message, tone = "neutral") => {
   statusEl.textContent = message;
@@ -32,9 +38,9 @@ const extractFilename = (disposition, fallback) => {
   return decodeURIComponent(value).replace(/["']/g, "") || fallback;
 };
 
-const buildPayload = () => ({
+const buildPayload = (selectedQuality) => ({
   url: input.value.trim(),
-  quality: qualitySelect.value || "best",
+  quality: selectedQuality || qualitySelect.value || "best",
   filename: filenameInput.value.trim(),
   container: "m4a",
 });
@@ -94,7 +100,44 @@ const fetchHistory = async () => {
   }
 };
 
-const populateOptions = (qualities) => {
+const renderPreview = (meta = {}) => {
+  mediaTitle.textContent = meta.title || "Ready to download audio";
+  if (meta.thumbnail) {
+    mediaThumb.src = meta.thumbnail;
+    mediaThumb.alt = meta.title || "Video thumbnail";
+    mediaThumb.hidden = false;
+  } else {
+    mediaThumb.src = "";
+    mediaThumb.hidden = true;
+  }
+  resultCard.hidden = false;
+};
+
+const renderRows = (qualities) => {
+  audioRows.innerHTML = "";
+  qualities.forEach((q) => {
+    const row = document.createElement("tr");
+
+    const fileType = document.createElement("td");
+    fileType.textContent = q === "best" ? "M4A - Best" : `M4A - ${q}kbps`;
+
+    const format = document.createElement("td");
+    format.textContent = "Auto";
+
+    const action = document.createElement("td");
+    action.className = "action-cell";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "⬇ Download";
+    btn.addEventListener("click", () => startDownload(q));
+    action.append(btn);
+
+    row.append(fileType, format, action);
+    audioRows.append(row);
+  });
+};
+
+const populateOptions = (qualities, meta = {}) => {
   qualitySelect.innerHTML = "";
   const items = (qualities && qualities.length ? qualities : ["best"]);
   const topNumeric = items.find((item) => item !== "best");
@@ -117,7 +160,11 @@ const populateOptions = (qualities) => {
   }
   optionsBlock.hidden = false;
   hasOptions = true;
-  downloadBtn.textContent = "Download audio";
+  audioMeta = meta;
+  audioQualities = items;
+  renderPreview(meta);
+  renderRows(items);
+  downloadBtn.textContent = "Download best audio";
 };
 
 const fetchAudioFormats = async (payload) => {
@@ -134,8 +181,8 @@ const fetchAudioFormats = async (payload) => {
       throw new Error(data.error || `Formats failed (${res.status})`);
     }
     const data = await res.json();
-    populateOptions(data.qualities);
-    setStatus("Audio qualities loaded. Choose one, then Download.", "positive");
+    populateOptions(data.qualities, data.meta || {});
+    setStatus("Audio qualities ready. Pick a row to download.", "positive");
   } catch (error) {
     console.error(error);
     setStatus(error.message || "Unable to fetch audio qualities.", "negative");
@@ -144,19 +191,8 @@ const fetchAudioFormats = async (payload) => {
   }
 };
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const payload = buildPayload();
-  if (!payload.url) {
-    setStatus("Please paste a YouTube URL first.", "negative");
-    return;
-  }
-
-  if (!hasOptions) {
-    await fetchAudioFormats(payload);
-    return;
-  }
-
+const startDownload = async (selectedQuality) => {
+  const payload = buildPayload(selectedQuality);
   setBusy(true);
   setStatus("Download started...", "neutral");
   resetProgress();
@@ -227,6 +263,22 @@ form.addEventListener("submit", async (event) => {
     setBusy(false, "Download audio");
     resetProgress();
   }
+};
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const payload = buildPayload();
+  if (!payload.url) {
+    setStatus("Please paste a YouTube URL first.", "negative");
+    return;
+  }
+
+  if (!hasOptions) {
+    await fetchAudioFormats(payload);
+    return;
+  }
+
+  await startDownload(payload.quality);
 });
 
 refreshHistoryBtn.addEventListener("click", fetchHistory);

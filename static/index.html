@@ -14,7 +14,6 @@
   <header class="topbar">
     <nav class="nav centered">
       <a href="index.html">Home</a>
-      <a href="audio.html">Audio downloader</a>
       <a href="how.html">How to download</a>
     </nav>
   </header>
@@ -34,21 +33,7 @@
           <span class="sr-only">YouTube URL</span>
           <input id="url" name="url" type="url" placeholder="Enter YouTube URL" required autocomplete="off">
         </label>
-        <button id="download-btn" type="submit" class="primary">Fetch qualities</button>
-
-        <div id="options" class="field grid two-up full" hidden>
-          <label>
-            <span class="label">Quality</span>
-            <select id="quality" name="quality"></select>
-          </label>
-          <label>
-            <span class="label">Format</span>
-            <select id="container" name="container">
-              <option value="mp4">MP4</option>
-              <option value="mkv">MKV</option>
-            </select>
-          </label>
-        </div>
+        <button id="download-btn" type="submit" class="primary">Fetch formats</button>
 
         <label class="field full">
           <span class="label">Custom filename (optional)</span>
@@ -62,6 +47,51 @@
           </div>
         </div>
       </form>
+    </section>
+
+    <section id="result-card" class="result-card" hidden>
+      <div class="result-grid">
+        <div class="preview">
+          <div class="thumb-frame">
+            <img id="media-thumb" alt="Video thumbnail" class="thumb" src="">
+          </div>
+          <h3 id="media-title" class="media-title"></h3>
+        </div>
+
+        <div class="formats">
+          <div class="tab-bar">
+            <button class="tab active" type="button" data-tab="audio" aria-selected="true">🎵 Audio</button>
+            <button class="tab" type="button" data-tab="video" aria-selected="false">🎬 Video</button>
+            <span class="tab disabled" aria-disabled="true">➕ Other</span>
+          </div>
+
+          <div id="audio-panel" class="tab-panel">
+            <table class="format-table">
+              <thead>
+                <tr>
+                  <th>File type</th>
+                  <th>Format</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="audio-rows"></tbody>
+            </table>
+          </div>
+
+          <div id="video-panel" class="tab-panel" hidden>
+            <table class="format-table">
+              <thead>
+                <tr>
+                  <th>File type</th>
+                  <th>Format</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="video-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section class="history panel">
