@@ -29,10 +29,14 @@ LINK_TTL_SECONDS = 1800
 LINK_STORE: Dict[str, Dict[str, Any]] = {}
 HISTORY = deque(maxlen=15)
 
-# Use a bundled static FFmpeg binary when present (helpful for hosts like Vercel).
-_bundled_ffmpeg = Path(__file__).parent / "bin" / ("ffmpeg.exe" if os.name == "nt" else "ffmpeg")
-if _bundled_ffmpeg.exists():
-    os.environ.setdefault("FFMPEG_BINARY", str(_bundled_ffmpeg))
+# Use bundled static FFmpeg/FFprobe when present (helpful for hosts like Vercel).
+_bin_dir = Path(__file__).parent / "bin"
+_ffmpeg = _bin_dir / ("ffmpeg.exe" if os.name == "nt" else "ffmpeg")
+_ffprobe = _bin_dir / ("ffprobe.exe" if os.name == "nt" else "ffprobe")
+if _ffmpeg.exists():
+    os.environ.setdefault("FFMPEG_BINARY", str(_ffmpeg))
+if _ffprobe.exists():
+    os.environ.setdefault("FFPROBE_BINARY", str(_ffprobe))
 
 def _error_status(exc: Exception) -> int:
     msg = str(exc).lower()
