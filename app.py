@@ -90,9 +90,10 @@ def fetch_formats() -> Any:
 def handle_download() -> Any:
     payload: Dict[str, Any] = request.get_json(silent=True) or {}
     url = payload.get("url") or request.form.get("url")
-    quality = payload.get("quality") or request.form.get("quality") or "1080"
     desired_name = payload.get("filename") or request.form.get("filename") or ""
     container = payload.get("container") or request.form.get("container") or "mp4"
+    default_quality = "best" if container == "m4a" else "1080"
+    quality = payload.get("quality") or request.form.get("quality") or default_quality
 
     if not url:
         return jsonify({"error": "Please provide a YouTube URL."}), 400
@@ -135,7 +136,7 @@ def fetch_audio_formats() -> Any:
     if not bitrates:
         return jsonify({"error": "No audio qualities found for this link."}), 404
 
-    return jsonify({"qualities": [str(b) for b in bitrates], "containers": ["m4a"]})
+    return jsonify({"qualities": ["best"] + [str(b) for b in bitrates], "containers": ["m4a"]})
 
 
 @app.post("/api/link")

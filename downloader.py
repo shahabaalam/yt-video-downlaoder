@@ -2,10 +2,9 @@ import os
 import re
 import shutil
 import tempfile
-from typing import Dict, List, Tuple
+from typing import Any, List, Tuple
 
 import yt_dlp
-
 
 class DownloadError(Exception):
     """Raised when a download or merge step fails."""
@@ -42,14 +41,17 @@ def available_heights(url: str) -> List[int]:
     """
     _validate_url(url)
     try:
+        # Pass dict directly to avoid TypedDict mismatch
         with yt_dlp.YoutubeDL({"quiet": True, "noplaylist": True}) as ydl:
             info = ydl.extract_info(url, download=False)
+            if not info:
+                return []
     except Exception as exc:
         raise DownloadError(f"Could not fetch formats: {exc}") from exc
 
     heights = {
         int(fmt["height"])
-        for fmt in info.get("formats", [])
+        for fmt in (info.get("formats") or [])
         if fmt.get("height") and fmt.get("vcodec") and fmt.get("vcodec") != "none"
     }
     return sorted(heights, reverse=True)
@@ -61,14 +63,17 @@ def available_audio_bitrates(url: str) -> List[int]:
     """
     _validate_url(url)
     try:
+        # Pass dict directly to avoid TypedDict mismatch
         with yt_dlp.YoutubeDL({"quiet": True, "noplaylist": True}) as ydl:
             info = ydl.extract_info(url, download=False)
+            if not info:
+                return []
     except Exception as exc:
         raise DownloadError(f"Could not fetch audio formats: {exc}") from exc
 
     bitrates = {
         int(fmt["abr"])
-        for fmt in info.get("formats", [])
+        for fmt in (info.get("formats") or [])
         if fmt.get("abr") and fmt.get("acodec") and fmt.get("acodec") != "none"
     }
     return sorted(bitrates, reverse=True)
@@ -96,47 +101,50 @@ def download_video(
     fallback_name = "%(title).80s [%(id)s]"
     base_name = _sanitize_filename(desired_name, "video") if desired_name else fallback_name
 
-    if is_audio_only:
-        audio_quality = "192"
-        match = re.search(r"(\d+)", str(quality))
-        if match:
-            audio_quality = match.group(1)
-
-        format_selector = "bestaudio[ext=m4a]/bestaudio/best"
-        ydl_opts: Dict[str, object] = {
-            "format": format_selector,
-            "merge_output_format": None,
-            "outtmpl": os.path.join(temp_dir, f"{base_name}.%(ext)s"),
-            "noplaylist": True,
-            "quiet": True,
-            "postprocessors": [
-                {"key": "FFmpegExtractAudio", "preferredcodec": "m4a", "preferredquality": audio_quality}
-            ],
-        }
-    else:
-        try:
-            height_int = int(str(quality).replace("p", ""))
-        except ValueError:
-            height_int = 1080
-
-        video_selector = f"bestvideo[height<={height_int}]"
-        format_selector = f"{video_selector}+bestaudio/bestvideo+bestaudio/best"
-        ydl_opts = {
-            "format": format_selector,
-            "merge_output_format": container,
-            "outtmpl": os.path.join(temp_dir, f"{base_name}.%(ext)s"),
-            "noplaylist": True,
-            "quiet": True,
-            "postprocessors": [
-                {"key": "FFmpegVideoConvertor", "preferedformat": container},
-            ],
-        }
-
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            ydl.prepare_filename(info)
-    except Exception as exc:  # pragma: no cover - defensive catch for CLI errors
+        if is_audio_only:
+            audio_quality = "192"
+            match = re.search(r"(\d+)", str(quality))
+            if match:
+                audio_quality = match.group(1)
+
+            # Option 1: Pass dict inline
+            with yt_dlp.YoutubeDL({
+                "format": "bestaudio[ext=m4a]/bestaudio/best",
+                "outtmpl": os.path.join(temp_dir, f"{base_name}.%(ext)s"),
+                "noplaylist": True,
+                "quiet": True,
+                "postprocessors": [{
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "m4a",
+                    "preferredquality": audio_quality
+                }],
+            }) as ydl:
+                info = ydl.extract_info(url, download=True)
+        else:
+            try:
+                height_int = int(str(quality).replace("p", ""))
+            except ValueError:
+                height_int = 1080
+
+            video_selector = f"bestvideo[height<={height_int}]"
+            format_selector = f"{video_selector}+bestaudio/bestvideo+bestaudio/best"
+
+            # Option 1: Pass dict inline
+            with yt_dlp.YoutubeDL({
+                "format": format_selector,
+                "merge_output_format": container,
+                "outtmpl": os.path.join(temp_dir, f"{base_name}.%(ext)s"),
+                "noplaylist": True,
+                "quiet": True,
+                "postprocessors": [{
+                    "key": "FFmpegVideoConvertor",
+                    "preferredformat": container,  # Fixed spelling here
+                }],
+            }) as ydl:
+                info = ydl.extract_info(url, download=True)
+
+    except Exception as exc:
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise DownloadError(f"Download failed: {exc}") from exc
 

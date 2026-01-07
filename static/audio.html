@@ -35,19 +35,18 @@
           <input id="url" name="url" type="url" placeholder="Enter YouTube URL" required autocomplete="off">
         </label>
 
-        <div id="options" class="field full" hidden>
+        <button id="download-btn" type="submit" class="primary">Fetch audio qualities</button>
+
+        <div id="options" class="field grid two-up full" hidden>
           <label class="field full">
             <span class="label">Audio quality</span>
             <select id="audio-quality" name="quality"></select>
           </label>
+          <label class="field full">
+            <span class="label">Custom filename (optional)</span>
+            <input id="filename" name="filename" type="text" placeholder="my-audio">
+          </label>
         </div>
-
-        <label class="field full">
-          <span class="label">Custom filename (optional)</span>
-          <input id="filename" name="filename" type="text" placeholder="my-audio">
-        </label>
-
-        <button id="download-btn" type="submit" class="primary">Fetch audio qualities</button>
 
         <div class="status-line">
           <div id="status" class="status" aria-live="polite"></div>

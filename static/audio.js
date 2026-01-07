@@ -34,7 +34,7 @@ const extractFilename = (disposition, fallback) => {
 
 const buildPayload = () => ({
   url: input.value.trim(),
-  quality: qualitySelect.value || "192",
+  quality: qualitySelect.value || "best",
   filename: filenameInput.value.trim(),
   container: "m4a",
 });
@@ -96,12 +96,25 @@ const fetchHistory = async () => {
 
 const populateOptions = (qualities) => {
   qualitySelect.innerHTML = "";
-  (qualities || []).forEach((q) => {
+  const items = (qualities && qualities.length ? qualities : ["best"]);
+  const topNumeric = items.find((item) => item !== "best");
+
+  items.forEach((q) => {
     const option = document.createElement("option");
     option.value = q;
-    option.textContent = `${q} kbps`;
+    if (q === "best") {
+      const approx = topNumeric ? ` (~${topNumeric} kbps)` : "";
+      option.textContent = `Best available${approx}`;
+    } else {
+      option.textContent = `${q} kbps`;
+    }
     qualitySelect.append(option);
   });
+  if (qualitySelect.querySelector('option[value="best"]')) {
+    qualitySelect.value = "best";
+  } else if (qualitySelect.options.length) {
+    qualitySelect.selectedIndex = 0;
+  }
   optionsBlock.hidden = false;
   hasOptions = true;
   downloadBtn.textContent = "Download audio";
