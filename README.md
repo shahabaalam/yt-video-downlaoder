@@ -42,3 +42,4 @@ Flow:
 ## Notes
 - For the best format detection, install a JS runtime (Node.js or Deno) so yt-dlp can resolve all formats. Without it, some formats may be missing.
 - This app is intended for personal use. Respect YouTube’s Terms of Service and local laws.
+- Deploying to Vercel (no apt): place a static ffmpeg binary at `bin/ffmpeg` (Linux x64 build), and the app will auto-use it via `FFMPEG_BINARY`. Keep the binary lean to fit size limits.

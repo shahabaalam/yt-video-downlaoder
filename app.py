@@ -3,6 +3,7 @@ import shutil
 import time
 import uuid
 from collections import deque
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from flask import (
@@ -27,6 +28,11 @@ app = Flask(__name__, static_folder="static", static_url_path="")
 LINK_TTL_SECONDS = 1800
 LINK_STORE: Dict[str, Dict[str, Any]] = {}
 HISTORY = deque(maxlen=15)
+
+# Use a bundled static FFmpeg binary when present (helpful for hosts like Vercel).
+_bundled_ffmpeg = Path(__file__).parent / "bin" / ("ffmpeg.exe" if os.name == "nt" else "ffmpeg")
+if _bundled_ffmpeg.exists():
+    os.environ.setdefault("FFMPEG_BINARY", str(_bundled_ffmpeg))
 
 def _error_status(exc: Exception) -> int:
     msg = str(exc).lower()
