@@ -10,6 +10,9 @@ class DownloadError(Exception):
     """Raised when a download or merge step fails."""
 
 
+COOKIES_FILE = (os.environ.get("YTDLP_COOKIES") or os.environ.get("YOUTUBE_COOKIES") or "").strip()
+
+
 def _validate_url(url: str) -> None:
     if not url or not isinstance(url, str):
         raise ValueError("A URL is required.")
@@ -63,7 +66,7 @@ def available_heights(url: str) -> Tuple[List[int], Dict[str, str]]:
     _validate_url(url)
     try:
         # Pass dict directly to avoid TypedDict mismatch
-        with yt_dlp.YoutubeDL({"quiet": True, "noplaylist": True}) as ydl:
+        with yt_dlp.YoutubeDL({"quiet": True, "noplaylist": True, "cookiefile": COOKIES_FILE or None}) as ydl:
             info = ydl.extract_info(url, download=False)
             if not info:
                 return [], {"title": "", "thumbnail": ""}
@@ -94,7 +97,7 @@ def available_audio_bitrates(url: str) -> Tuple[List[int], Dict[str, str]]:
     """
     _validate_url(url)
     try:
-        with yt_dlp.YoutubeDL({"quiet": True, "noplaylist": True}) as ydl:
+        with yt_dlp.YoutubeDL({"quiet": True, "noplaylist": True, "cookiefile": COOKIES_FILE or None}) as ydl:
             info = ydl.extract_info(url, download=False)
             if not info:
                 return [], {"title": "", "thumbnail": ""}
@@ -175,6 +178,7 @@ def download_video(
                 "quiet": True,
                 # Fix: Cast the list to Any to satisfy the strict Type Checker
                 "postprocessors": cast(List[Any], postprocessors),
+                "cookiefile": COOKIES_FILE or None,
             }) as ydl:
                 info = ydl.extract_info(url, download=True)
         else:
@@ -197,6 +201,7 @@ def download_video(
                     # yt-dlp expects the misspelled 'preferedformat'
                     "preferedformat": container,
                 }],
+                "cookiefile": COOKIES_FILE or None,
             }) as ydl:
                 info = ydl.extract_info(url, download=True)
 
@@ -280,6 +285,7 @@ def download_playlist(
                 "quiet": True,
                 "ignoreerrors": True,
                 "postprocessors": cast(List[Any], postprocessors),
+                "cookiefile": COOKIES_FILE or None,
             }) as ydl:
                 ydl.extract_info(url, download=True)
         else:
@@ -303,6 +309,7 @@ def download_playlist(
                     # yt-dlp expects the misspelled 'preferedformat'
                     "preferedformat": container,
                 }],
+                "cookiefile": COOKIES_FILE or None,
             }) as ydl:
                 ydl.extract_info(url, download=True)
 
