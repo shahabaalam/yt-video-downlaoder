@@ -1,18 +1,19 @@
-# YouTube 1080p Downloader (Personal)
+# YTGrab (YouTube downloader)
 
-A minimal Flask app that downloads YouTube videos, merges video + audio with `yt-dlp` + `ffmpeg`, and streams the final file back to you. The UI now fetches real per-video qualities (e.g., 4K/1080p/720p) and lets you pick container (MP4/MKV) and filename before download.
+A Flask + yt-dlp + FFmpeg app that downloads YouTube video or audio. The UI shows real per-video qualities, handles playlists automatically (returns ZIPs), and lets you pick container and filename before downloading.
 
 ## Features
-- Two-step flow: paste URL → fetch available qualities (per video) → pick quality + container → download or copy link.
-- Quality selector populated from `yt-dlp` (shows only what that video supports, including 4K when available).
+- Video + audio combined: paste URL, fetch real qualities, pick quality/container, download.
+- Automatic playlist detection: playlist URLs are zipped (video: MP4/MKV; audio: MP3); dedicated page at `playlist.html`.
+- Quality selector populated from `yt-dlp` (only what the video supports, including 4K when present).
 - Choose container (MP4/MKV) and optional custom filename.
-- Copyable download link (helpful on mobile devices); links auto-expire after ~30 minutes.
+- Copyable download link (auto-expires ~30 minutes).
 - Recent download history (in-memory, last 15).
-- Inline status updates and a download progress bar when the browser provides content length.
+- Inline status updates and a progress bar when content length is known.
 
 ## Requirements
-- Python 3.9+ (tested with 3.11)
-- `ffmpeg` available on your `PATH`
+- Python 3.9+
+- `ffmpeg` on your `PATH`
 - Python packages: `Flask`, `yt-dlp` (see `requirements.txt`)
 
 ## Setup
@@ -25,24 +26,19 @@ pip install -r requirements.txt
 ## Run the server
 ```bash
 python app.py
-# Server listens on http://0.0.0.0:5000
+# Listens on http://0.0.0.0:5000 (set PORT to override)
 ```
 
-Then open `http://localhost:5000` (desktop or mobile).
+Then open `http://localhost:5000`:
+- `index.html`: single video or auto-detected playlist; pick Audio/Video and download.
+- `playlist.html`: playlist-focused page (video or audio ZIP).
+- `how.html`: usage tips.
 
 Flow:
-1) Paste a YouTube URL and click **Fetch qualities**.
-2) Choose one of the returned qualities and a container (MP4/MKV), optionally set a filename.
-3) Click **Download** to trigger your browser’s save dialog, or **Copy download link** to share a one-time download link.
-
-## How it works
-- `POST /api/formats` uses `yt-dlp` to list available video heights; the UI shows only those.
-- `downloader.py` downloads best video <= selected height + best audio, merges via `ffmpeg`, and remuxes to the chosen container.
-- `POST /api/download` streams the merged file immediately; temp files are cleaned right after the response.
-- `POST /api/link` prepares a download and returns a copyable `/api/link/<token>` that expires in ~30 minutes; the file is deleted when fetched or expired.
-- `GET /api/history` returns the recent (in-memory) downloads for the UI.
-- The frontend (`static/*`) handles the two-step fetch/download flow, quality/container/filename inputs, copy-link flow, and history rendering.
+1) Paste a YouTube URL and click **Fetch formats**.
+2) Pick a row (Audio or Video). Playlist URLs are handled automatically and returned as a ZIP.
+3) Click **Download**; history tracks your last 15 downloads.
 
 ## Notes
-- This app is intended for personal use. Respect YouTube's Terms of Service and local laws.
-- If you prefer a different port, set `PORT=8080` (or any number) before running.
+- For the best format detection, install a JS runtime (Node.js or Deno) so yt-dlp can resolve all formats. Without it, some formats may be missing.
+- This app is intended for personal use. Respect YouTube’s Terms of Service and local laws.

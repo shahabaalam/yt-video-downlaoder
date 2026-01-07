@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Playlist Downloader - YTGrab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="img/logo.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <nav class="nav centered">
+      <a href="index.html">Home</a>
+      <a href="playlist.html">Playlist downloader</a>
+      <a href="how.html">How to download</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="hero inline">
+      <div class="brand-inline">
+        <img src="img/logo.png" alt="YTGrab logo" class="logo">
+        <h1>Playlist downloader</h1>
+      </div>
+      <p class="tagline">Paste a playlist URL and grab it as a ZIP (video or audio).</p>
+    </section>
+
+    <section class="search-card">
+      <form id="playlist-form" class="search-form">
+        <label class="field full">
+          <span class="sr-only">YouTube playlist URL</span>
+          <input id="url" name="url" type="url" placeholder="Enter playlist URL" required autocomplete="off">
+        </label>
+
+        <div class="field grid two-up full">
+          <label>
+            <span class="label">Type</span>
+            <select id="mode" name="mode">
+              <option value="video">Video (MP4)</option>
+              <option value="audio">Audio (MP3)</option>
+            </select>
+          </label>
+          <label>
+            <span class="label">Quality</span>
+            <select id="quality" name="quality"></select>
+          </label>
+        </div>
+
+        <label class="field full">
+          <span class="label">Custom filename (optional)</span>
+          <input id="filename" name="filename" type="text" placeholder="my-playlist">
+        </label>
+
+        <div class="actions">
+          <button id="download-btn" type="submit" class="primary">Download playlist (ZIP)</button>
+        </div>
+
+        <div class="status-line">
+          <div id="status" class="status" aria-live="polite"></div>
+          <div id="progress-wrap" class="progress-wrap" hidden>
+            <div id="progress-bar" class="progress"></div>
+          </div>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="playlist.js"></script>
+</body>
+</html>

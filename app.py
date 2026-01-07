@@ -28,6 +28,14 @@ LINK_TTL_SECONDS = 1800
 LINK_STORE: Dict[str, Dict[str, Any]] = {}
 HISTORY = deque(maxlen=15)
 
+def _error_status(exc: Exception) -> int:
+    msg = str(exc).lower()
+    if any(word in msg for word in ["unavailable", "terminated", "removed", "copyright", "blocked"]):
+        return 404
+    if any(word in msg for word in ["private", "signin", "age-restricted"]):
+        return 403
+    return 500
+
 
 def _cleanup_links() -> None:
     """Remove expired links and their temp directories."""
@@ -69,6 +77,11 @@ def index() -> Any:
     return app.send_static_file("index.html")
 
 
+@app.route("/playlist")
+def playlist_page() -> Any:
+    return app.send_static_file("playlist.html")
+
+
 @app.post("/api/formats")
 def fetch_formats() -> Any:
     payload: Dict[str, Any] = request.get_json(silent=True) or {}
@@ -80,7 +93,7 @@ def fetch_formats() -> Any:
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     except DownloadError as exc:
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": str(exc)}), _error_status(exc)
 
     if not heights:
         return jsonify({"error": "No video qualities found for this link."}), 404
@@ -120,7 +133,7 @@ def handle_download() -> Any:
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     except DownloadError as exc:
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": str(exc)}), _error_status(exc)
 
     filename = os.path.basename(file_path)
     quality_label = f"{quality}p" if str(quality).isdigit() else str(quality)
@@ -149,7 +162,7 @@ def fetch_audio_formats() -> Any:
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     except DownloadError as exc:
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": str(exc)}), _error_status(exc)
 
     # Force fixed MP3 options
     fixed_qualities = ["320", "128"]
