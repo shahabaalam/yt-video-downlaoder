@@ -10,7 +10,20 @@ class DownloadError(Exception):
     """Raised when a download or merge step fails."""
 
 
-COOKIES_FILE = (os.environ.get("YTDLP_COOKIES") or os.environ.get("YOUTUBE_COOKIES") or "").strip()
+COOKIES_ENV = (os.environ.get("YTDLP_COOKIES") or os.environ.get("YOUTUBE_COOKIES") or "").strip()
+COOKIES_FILE = ""
+if COOKIES_ENV:
+    if os.path.isfile(COOKIES_ENV):
+        COOKIES_FILE = COOKIES_ENV
+    else:
+        try:
+            # If env contains raw cookie text, persist it to a temp file for yt-dlp
+            tmp = tempfile.NamedTemporaryFile(delete=False, prefix="yt_cookies_", suffix=".txt")
+            tmp.write(COOKIES_ENV.encode("utf-8"))
+            tmp.close()
+            COOKIES_FILE = tmp.name
+        except Exception:
+            COOKIES_FILE = ""
 
 
 def _validate_url(url: str) -> None:
