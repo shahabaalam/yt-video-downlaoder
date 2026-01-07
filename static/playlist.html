@@ -12,11 +12,17 @@
 </head>
 <body>
   <header class="topbar">
-    <nav class="nav centered">
-      <a href="index.html">Home</a>
-      <a href="playlist.html">Playlist downloader</a>
-      <a href="how.html">How to download</a>
-    </nav>
+    <div class="topbar-inner">
+      <a class="brand-mini" href="index.html" aria-label="YTGrab home">
+        <img src="img/logo.png" alt="YTGrab logo">
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Toggle menu" aria-expanded="false">☰</button>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="playlist.html">Playlist downloader</a>
+        <a href="how.html">How to download</a>
+      </nav>
+    </div>
   </header>
 
   <main class="page">
@@ -69,5 +75,6 @@
   </main>
 
   <script src="playlist.js"></script>
+  <script src="header.js"></script>
 </body>
 </html>
