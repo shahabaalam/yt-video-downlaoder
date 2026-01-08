@@ -1,5 +1,6 @@
 import os
 import shutil
+import stat
 import time
 import uuid
 from collections import deque
@@ -33,9 +34,18 @@ HISTORY = deque(maxlen=15)
 _bin_dir = Path(__file__).parent / "bin"
 _ffmpeg = _bin_dir / ("ffmpeg.exe" if os.name == "nt" else "ffmpeg")
 _ffprobe = _bin_dir / ("ffprobe.exe" if os.name == "nt" else "ffprobe")
+def _ensure_executable(path: Path) -> None:
+    try:
+        mode = path.stat().st_mode
+        path.chmod(mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    except OSError:
+        pass
+
 if _ffmpeg.exists():
+    _ensure_executable(_ffmpeg)
     os.environ.setdefault("FFMPEG_BINARY", str(_ffmpeg))
 if _ffprobe.exists():
+    _ensure_executable(_ffprobe)
     os.environ.setdefault("FFPROBE_BINARY", str(_ffprobe))
 
 def _error_status(exc: Exception) -> int:
