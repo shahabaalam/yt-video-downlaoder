@@ -82,6 +82,13 @@ def _record_history(
     )
 
 
+def _quality_label(container: str, quality: str | int) -> str:
+    q_str = str(quality)
+    if container in {"mp3", "m4a"}:
+        return f"{q_str} kbps" if q_str.isdigit() else q_str
+    return f"{q_str}p" if q_str.isdigit() else q_str
+
+
 @app.route("/")
 def index() -> Any:
     return app.send_static_file("index.html")
@@ -146,7 +153,7 @@ def handle_download() -> Any:
         return jsonify({"error": str(exc)}), _error_status(exc)
 
     filename = os.path.basename(file_path)
-    quality_label = f"{quality}p" if str(quality).isdigit() else str(quality)
+    quality_label = _quality_label(container, quality)
     mode_label = "playlist" if playlist_mode else "direct"
     _record_history(url, quality_label, filename, mode=mode_label, container=container)
 
@@ -207,7 +214,7 @@ def create_link() -> Any:
         "created_at": time.time(),
     }
 
-    quality_label = f"{quality}p" if str(quality).isdigit() else str(quality)
+    quality_label = _quality_label(container, quality)
     _record_history(url, quality_label, filename, mode="link", container=container, token=token)
 
     return jsonify({"link": f"/api/link/{token}", "filename": filename, "expires_in": LINK_TTL_SECONDS})

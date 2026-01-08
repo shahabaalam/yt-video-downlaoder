@@ -1,6 +1,8 @@
 const form = document.getElementById("download-form");
 const input = document.getElementById("url");
 const filenameInput = document.getElementById("filename");
+const filenameField = document.getElementById("filename-field");
+const clearBtn = document.getElementById("clear-url");
 const downloadBtn = document.getElementById("download-btn");
 const statusEl = document.getElementById("status");
 const progressWrap = document.getElementById("progress-wrap");
@@ -29,6 +31,19 @@ const setStatus = (message, tone = "neutral") => {
   statusEl.classList.remove("positive", "negative");
   if (tone === "positive") statusEl.classList.add("positive");
   if (tone === "negative") statusEl.classList.add("negative");
+};
+
+const showFilenameField = (visible) => {
+  if (!filenameField) return;
+  filenameField.classList.toggle("hidden", !visible);
+  filenameField.classList.toggle("visible", visible);
+};
+
+const resetFormats = () => {
+  hasFormats = false;
+  showFilenameField(false);
+  resultCard.hidden = true;
+  if (clearBtn) clearBtn.hidden = !input.value.trim();
 };
 
 const setBusy = (isBusy, label = "Fetch formats") => {
@@ -199,6 +214,7 @@ const populateFormats = (videoResp, audioResp) => {
 };
 
 const fetchAllFormats = async (url) => {
+  resetFormats();
   setBusy(true, "Fetching...");
   setStatus("Fetching available formats...", "neutral");
   try {
@@ -226,6 +242,7 @@ const fetchAllFormats = async (url) => {
     }
 
     populateFormats(videoData, audioData);
+    showFilenameField(true);
   } catch (error) {
     console.error(error);
     setStatus(error.message || "Unable to fetch formats.", "negative");
@@ -329,6 +346,16 @@ tabButtons.forEach((btn) => {
 });
 
 refreshHistoryBtn.addEventListener("click", fetchHistory);
+input.addEventListener("input", resetFormats);
+
+if (clearBtn) {
+  clearBtn.addEventListener("click", () => {
+    input.value = "";
+    resetFormats();
+    setStatus("Link cleared.", "neutral");
+  });
+}
 
 // Initial load
+resetFormats();
 fetchHistory();

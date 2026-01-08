@@ -36,13 +36,14 @@
 
     <section class="search-card">
       <form id="download-form" class="search-form">
-        <label class="field full">
+        <label class="field full url-field">
           <span class="sr-only">YouTube URL</span>
           <input id="url" name="url" type="url" placeholder="Enter YouTube URL" required autocomplete="off">
+          <button id="clear-url" type="button" class="clear-btn" aria-label="Clear URL" hidden>✕</button>
         </label>
         <button id="download-btn" type="submit" class="primary">Fetch formats</button>
 
-        <label class="field full">
+        <label id="filename-field" class="field full filename-field hidden">
           <span class="label">Custom filename (optional)</span>
           <input id="filename" name="filename" type="text" placeholder="my-video">
         </label>

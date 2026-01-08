@@ -37,7 +37,7 @@ body {
   margin: 0 auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
 }
 
@@ -62,10 +62,14 @@ body {
 .nav {
   display: flex;
   gap: 18px;
-  margin-left: auto;
+  margin-left: 0;
   align-items: center;
   flex-wrap: wrap;
   position: relative;
+}
+
+.brand-mini {
+  display: none;
 }
 
 .nav a {
@@ -87,13 +91,25 @@ body {
 
 .nav-toggle {
   display: none;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.35);
   color: #f8fafc;
   font-size: 18px;
-  padding: 8px 12px;
-  border-radius: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
   cursor: pointer;
+  box-shadow: none;
+  transition: none;
+}
+
+.nav-toggle:hover,
+.nav-toggle:active,
+.nav-toggle:focus-visible {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  outline: 1px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
 }
 
 .page {
@@ -179,6 +195,37 @@ h1 {
 .field {
   display: grid;
   gap: 6px;
+}
+
+.url-field {
+  position: relative;
+}
+
+.clear-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 4px 8px;
+  background: transparent;
+  color: #ef4444;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.clear-btn[hidden] {
+  display: none;
+}
+
+.filename-field.hidden {
+  display: none;
+}
+
+.filename-field.visible {
+  display: grid;
 }
 
 .grid.two-up {
@@ -573,7 +620,7 @@ button.ghost {
   }
 
   .nav {
-    display: none;
+    display: flex;
     position: absolute;
     top: 60px;
     right: 18px;
@@ -586,13 +633,35 @@ button.ghost {
     gap: 10px;
     min-width: 180px;
     z-index: 11;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-6px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
   }
 
   body.nav-open .nav {
-    display: flex;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
   }
 
   .nav-toggle {
     display: inline-flex;
+  }
+
+  .brand-mini {
+    display: inline-flex;
+  }
+
+  .topbar-inner {
+    justify-content: space-between;
+  }
+
+  .brand-inline {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
   }
 }
