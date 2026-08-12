@@ -52,7 +52,7 @@ def _error_status(exc: Exception) -> int:
     msg = str(exc).lower()
     if any(word in msg for word in ["unavailable", "terminated", "removed", "copyright", "blocked"]):
         return 404
-    if any(word in msg for word in ["private", "signin", "age-restricted"]):
+    if any(word in msg for word in ["private", "signin", "sign in", "not a bot", "age-restricted"]):
         return 403
     return 500
 

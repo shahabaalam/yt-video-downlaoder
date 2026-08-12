@@ -11,6 +11,11 @@ class DownloadError(Exception):
 
 
 COOKIES_ENV = (os.environ.get("YTDLP_COOKIES") or os.environ.get("YOUTUBE_COOKIES") or "").strip()
+COOKIES_FROM_BROWSER_ENV = (
+    os.environ.get("YTDLP_COOKIES_FROM_BROWSER")
+    or os.environ.get("YOUTUBE_COOKIES_FROM_BROWSER")
+    or ""
+).strip()
 COOKIES_FILE = ""
 if COOKIES_ENV:
     if os.path.isfile(COOKIES_ENV):
@@ -25,6 +30,37 @@ if COOKIES_ENV:
         except Exception:
             COOKIES_FILE = ""
 
+
+def _parse_cookies_from_browser(value: str) -> Tuple[Any, ...]:
+    """
+    Convert yt-dlp's CLI-style browser spec into the Python API tuple:
+    browser[+keyring][:profile][::container] -> (browser, profile, keyring, container)
+    """
+    match = re.fullmatch(
+        r"(?P<name>[^+:]+)(?:\s*\+\s*(?P<keyring>[^:]+))?"
+        r"(?::(?!:)(?P<profile>.+?))?(?:::(?P<container>.+))?",
+        value.strip(),
+    )
+    if not match:
+        return ()
+
+    browser, keyring, profile, container = match.group("name", "keyring", "profile", "container")
+    parts: List[Any] = [browser.lower(), profile, keyring.upper() if keyring else None, container]
+    while parts and parts[-1] is None:
+        parts.pop()
+    return tuple(parts)
+
+
+COOKIES_FROM_BROWSER = _parse_cookies_from_browser(COOKIES_FROM_BROWSER_ENV) if COOKIES_FROM_BROWSER_ENV else ()
+
+
+def _ydl_opts(options: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    opts = dict(options or {})
+    if COOKIES_FILE:
+        opts["cookiefile"] = COOKIES_FILE
+    elif COOKIES_FROM_BROWSER:
+        opts["cookiesfrombrowser"] = COOKIES_FROM_BROWSER
+    return opts
 
 def _validate_url(url: str) -> None:
     if not url or not isinstance(url, str):
@@ -58,12 +94,12 @@ def is_playlist(url: str) -> bool:
     try:
         # Fix: Cast to 'Any' to completely bypass the strict TypedDict check
         with yt_dlp.YoutubeDL(
-            cast(Any, {
+            cast(Any, _ydl_opts({
                 "quiet": True,
                 "skip_download": True,
                 "extract_flat": True,
                 "noplaylist": False,
-            })
+            }))
         ) as ydl:
             info = ydl.extract_info(url, download=False)
     except Exception:
@@ -79,7 +115,7 @@ def available_heights(url: str) -> Tuple[List[int], Dict[str, str]]:
     _validate_url(url)
     try:
         # Pass dict directly to avoid TypedDict mismatch
-        with yt_dlp.YoutubeDL({"quiet": True, "noplaylist": True, "cookiefile": COOKIES_FILE or None}) as ydl:
+        with yt_dlp.YoutubeDL(_ydl_opts({"quiet": True, "noplaylist": True})) as ydl:
             info = ydl.extract_info(url, download=False)
             if not info:
                 return [], {"title": "", "thumbnail": ""}
@@ -110,7 +146,7 @@ def available_audio_bitrates(url: str) -> Tuple[List[int], Dict[str, str]]:
     """
     _validate_url(url)
     try:
-        with yt_dlp.YoutubeDL({"quiet": True, "noplaylist": True, "cookiefile": COOKIES_FILE or None}) as ydl:
+        with yt_dlp.YoutubeDL(_ydl_opts({"quiet": True, "noplaylist": True})) as ydl:
             info = ydl.extract_info(url, download=False)
             if not info:
                 return [], {"title": "", "thumbnail": ""}
@@ -184,15 +220,14 @@ def download_video(
                 )
                 postprocessors[0]["preferredquality"] = max_abr
 
-            with yt_dlp.YoutubeDL({
+            with yt_dlp.YoutubeDL(_ydl_opts({
                 "format": format_selector,
                 "outtmpl": os.path.join(temp_dir, f"{base_name}.%(ext)s"),
                 "noplaylist": True,
                 "quiet": True,
                 # Fix: Cast the list to Any to satisfy the strict Type Checker
                 "postprocessors": cast(List[Any], postprocessors),
-                "cookiefile": COOKIES_FILE or None,
-            }) as ydl:
+            })) as ydl:
                 info = ydl.extract_info(url, download=True)
         else:
             try:
@@ -203,7 +238,7 @@ def download_video(
             video_selector = f"bestvideo[height<={height_int}]"
             format_selector = f"{video_selector}+bestaudio/bestvideo+bestaudio/best"
 
-            with yt_dlp.YoutubeDL({
+            with yt_dlp.YoutubeDL(_ydl_opts({
                 "format": format_selector,
                 "merge_output_format": container,
                 "outtmpl": os.path.join(temp_dir, f"{base_name}.%(ext)s"),
@@ -214,8 +249,7 @@ def download_video(
                     # yt-dlp expects the misspelled 'preferedformat'
                     "preferedformat": container,
                 }],
-                "cookiefile": COOKIES_FILE or None,
-            }) as ydl:
+            })) as ydl:
                 info = ydl.extract_info(url, download=True)
 
     except Exception as exc:
@@ -291,15 +325,14 @@ def download_playlist(
                 )
                 postprocessors[0]["preferredquality"] = max_abr
 
-            with yt_dlp.YoutubeDL({
+            with yt_dlp.YoutubeDL(_ydl_opts({
                 "format": format_selector,
                 "outtmpl": file_pattern,
                 "noplaylist": False,
                 "quiet": True,
                 "ignoreerrors": True,
                 "postprocessors": cast(List[Any], postprocessors),
-                "cookiefile": COOKIES_FILE or None,
-            }) as ydl:
+            })) as ydl:
                 ydl.extract_info(url, download=True)
         else:
             try:
@@ -310,7 +343,7 @@ def download_playlist(
             video_selector = f"bestvideo[height<={height_int}]"
             format_selector = f"{video_selector}+bestaudio/bestvideo+bestaudio/best"
 
-            with yt_dlp.YoutubeDL({
+            with yt_dlp.YoutubeDL(_ydl_opts({
                 "format": format_selector,
                 "merge_output_format": container,
                 "outtmpl": file_pattern,
@@ -322,8 +355,7 @@ def download_playlist(
                     # yt-dlp expects the misspelled 'preferedformat'
                     "preferedformat": container,
                 }],
-                "cookiefile": COOKIES_FILE or None,
-            }) as ydl:
+            })) as ydl:
                 ydl.extract_info(url, download=True)
 
     except Exception as exc:

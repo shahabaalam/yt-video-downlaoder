@@ -29,6 +29,23 @@ python app.py
 # Listens on http://0.0.0.0:5000 (set PORT to override)
 ```
 
+## YouTube bot/authentication errors
+If YouTube shows `Sign in to confirm you're not a bot`, run the app with YouTube cookies from a browser where you are already signed in:
+
+```powershell
+$env:YTDLP_COOKIES_FROM_BROWSER = "chrome"   # or "edge", "firefox", "brave"
+python app.py
+```
+
+You can also use a Netscape-format cookies file:
+
+```powershell
+$env:YTDLP_COOKIES = "C:\path\to\cookies.txt"
+python app.py
+```
+
+Keep cookie files private. They can grant access to your signed-in browser session.
+
 Then open `http://localhost:5000`:
 - `index.html`: single video or auto-detected playlist; pick Audio/Video and download.
 - `playlist.html`: playlist-focused page (video or audio ZIP).
